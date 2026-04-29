@@ -1,6 +1,14 @@
 [package]
-name = "job_manager"
+name    = "job-manager-contract"
 version = "0.1.0"
-edition = "2024"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
 
 [dependencies]
+soroban-sdk = { workspace = true, features = ["alloc"] }
+
+[dev-dependencies]
+soroban-sdk = { workspace = true, features = ["testutils"] }
+escrow-contract = { path = "../escrow" }
