@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { useEffect, useState } from "react";
 import Header from "./components/Header";
 import HomePage from "./pages/HomePage";
+import StartPage from "./pages/StartPage";
 import RolePage from "./pages/RolePage";
 import ClientDashboard from "./pages/ClientDashboard";
 import FreelancerDashboard from "./pages/FreelancerDashboard";
@@ -11,7 +12,7 @@ import { useWallet } from "./context/WalletContext";
 function ProtectedRoute({ children }) {
   const { isConnected } = useWallet();
   if (!isConnected) {
-    return <Navigate to="/role" replace />;
+    return <Navigate to="/" replace />;
   }
   return children;
 }
@@ -29,8 +30,23 @@ export default function App() {
       <Header theme={theme} onToggleTheme={() => setTheme(theme === "dark" ? "light" : "dark")} />
       <main className="page-container">
         <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/role" element={<RolePage />} />
+          <Route path="/" element={<StartPage />} />
+          <Route
+            path="/home"
+            element={
+              <ProtectedRoute>
+                <HomePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/role"
+            element={
+              <ProtectedRoute>
+                <RolePage />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/client"
             element={

@@ -197,6 +197,10 @@ body {
   box-shadow: 0 12px 24px -10px rgba(0, 0, 0, 0.5);
 }
 
+.card-selected {
+  border-color: var(--primary);
+}
+
 .grid-form {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -225,6 +229,18 @@ select {
   color: var(--text);
   outline: none;
   transition: var(--transition);
+}
+
+/* Make number fields text-like (no spinner arrows) */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
 }
 
 input:focus,
@@ -295,9 +311,127 @@ button:active,
   border: 1px solid var(--border);
 }
 
+.milestone-header {
+  background: transparent;
+  border-style: dashed;
+  padding-top: 0.6rem;
+  padding-bottom: 0.6rem;
+}
+
+.milestone-header span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.milestone-help {
+  margin: -0.25rem 0 0.4rem;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
 .status {
   color: var(--primary);
   font-weight: 600;
+}
+
+.start-gate {
+  min-height: calc(100vh - 120px);
+  display: grid;
+  place-items: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.start-visual {
+  position: absolute;
+  width: 620px;
+  height: 620px;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  opacity: 0.95;
+  transform: none;
+}
+
+.orbit {
+  position: absolute;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+}
+
+.orbit-a {
+  width: 430px;
+  height: 430px;
+  border-color: #d4af37;
+  animation: spinSlow 12s linear infinite;
+}
+
+.orbit-b {
+  width: 540px;
+  height: 540px;
+  border-color: #7c3aed;
+  animation: spinReverse 16s linear infinite;
+}
+
+.orbit-c {
+  width: 300px;
+  height: 300px;
+  border-color: #d4af37;
+  animation: pulseRing 3.2s ease-in-out infinite;
+}
+
+.pulse-core {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: #d4af37;
+  box-shadow: 0 0 25px rgba(212, 175, 55, 0.75);
+  animation: pulseCore 2.5s ease-in-out infinite;
+}
+
+.start-card {
+  width: 100%;
+  max-width: 420px;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  display: grid;
+  gap: 0.9rem;
+  text-align: center;
+  position: relative;
+  z-index: 2;
+}
+
+.start-card h1 {
+  margin: 0;
+}
+
+.hidden-link {
+  display: none;
+}
+
+@keyframes spinSlow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes spinReverse {
+  from { transform: rotate(360deg); }
+  to { transform: rotate(0deg); }
+}
+
+@keyframes pulseRing {
+  0%, 100% { transform: scale(0.96); opacity: 0.75; }
+  50% { transform: scale(1.04); opacity: 1; }
+}
+
+@keyframes pulseCore {
+  0%, 100% { transform: scale(1); opacity: 0.85; }
+  50% { transform: scale(1.35); opacity: 1; }
 }
 
 small {
@@ -320,5 +454,11 @@ small {
   
   .hero h1 {
     font-size: 2rem;
+  }
+
+  .start-visual {
+    width: 460px;
+    height: 460px;
+    opacity: 0.75;
   }
 }

@@ -42,8 +42,34 @@ export const api = {
       body: JSON.stringify(payload)
     });
   },
+  getJobs(params = {}) {
+    const search = new URLSearchParams();
+    if (params.freelancer_wallet) {
+      search.set("freelancer_wallet", params.freelancer_wallet);
+    }
+    if (params.client_wallet) {
+      search.set("client_wallet", params.client_wallet);
+    }
+    if (params.limit) {
+      search.set("limit", String(params.limit));
+    }
+    const q = search.toString();
+    return request(`/jobs${q ? `?${q}` : ""}`);
+  },
   getJob(jobId) {
     return request(`/job/${jobId}`);
+  },
+  acceptJob(jobId, freelancer_wallet) {
+    return request(`/job/${jobId}/accept`, {
+      method: "POST",
+      body: JSON.stringify({ freelancer_wallet })
+    });
+  },
+  rejectJob(jobId, freelancer_wallet) {
+    return request(`/job/${jobId}/reject`, {
+      method: "POST",
+      body: JSON.stringify({ freelancer_wallet })
+    });
   },
   submitMilestone(payload) {
     return request("/submit", {

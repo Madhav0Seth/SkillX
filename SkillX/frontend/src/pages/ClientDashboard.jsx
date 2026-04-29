@@ -28,7 +28,25 @@ export default function ClientDashboard() {
   const [description, setDescription] = useState("");
   const [freelancerWallet, setFreelancerWallet] = useState("");
   const [milestones, setMilestones] = useState([emptyMilestone()]);
+  const [myJobs, setMyJobs] = useState([]);
   const [status, setStatus] = useState("");
+
+  const loadMyJobs = async () => {
+    setStatus("");
+    if (!address) {
+      setStatus("Connect wallet first.");
+      return;
+    }
+    try {
+      const result = await api.getJobs({ client_wallet: address, limit: 30 });
+      setMyJobs(result.jobs || []);
+      if (!result.jobs?.length) {
+        setStatus("No previous jobs found.");
+      }
+    } catch (error) {
+      setStatus(`Failed to load previous jobs: ${error.message}`);
+    }
+  };
 
   const browse = async () => {
     setStatus("");
@@ -59,6 +77,41 @@ export default function ClientDashboard() {
       return;
     }
     try {
+      if (freelancerWallet && freelancerWallet === address) {
+        setStatus("Client and freelancer cannot be the same wallet.");
+        return;
+      }
+
+      const parsedMilestones = milestones.map((m) => ({
+        ...m,
+        percentage: Number(m.percentage),
+        amount: Number(m.amount),
+        deadlineTs: Math.floor(new Date(m.deadline).getTime() / 1000)
+      }));
+
+      if (parsedMilestones.some((m) => !Number.isFinite(m.percentage) || m.percentage <= 0)) {
+        setStatus("Each milestone percentage must be a positive number.");
+        return;
+      }
+
+      const percentageSum = parsedMilestones.reduce(
+        (sum, m) => sum + m.percentage,
+        0
+      );
+      if (percentageSum !== 100) {
+        setStatus(`Milestone percentages must sum to 100. Current: ${percentageSum}`);
+        return;
+      }
+
+      if (
+        parsedMilestones.some(
+          (m) => !Number.isFinite(m.amount) || m.amount <= 0 || !Number.isFinite(m.deadlineTs)
+        )
+      ) {
+        setStatus("Each milestone must have a valid positive amount and deadline.");
+        return;
+      }
+
       const payload = {
         client_wallet: address,
         freelancer_wallet: freelancerWallet || null,
@@ -69,11 +122,11 @@ export default function ClientDashboard() {
       const result = await api.createJob(payload);
 
       const milestoneHashes = await Promise.all(
-        milestones.map((m) =>
+        parsedMilestones.map((m) =>
           sha256Hex(
             JSON.stringify({
               name: m.name,
-              percentage: Number(m.percentage),
+              percentage: m.percentage,
               deadline: m.deadline
             })
           )
@@ -85,12 +138,10 @@ export default function ClientDashboard() {
         jobIdHex: result.job.job_hash,
         jobHashHex: result.job.job_hash,
         clientAddress: address,
-        totalAmount: milestones.reduce((sum, m) => sum + Number(m.amount || 0), 0),
+        totalAmount: parsedMilestones.reduce((sum, m) => sum + m.amount, 0),
         milestoneHashesHex: milestoneHashes,
-        milestonePercentages: milestones.map((m) => Number(m.percentage)),
-        milestoneDeadlines: milestones.map((m) =>
-          Math.floor(new Date(m.deadline).getTime() / 1000)
-        )
+        milestonePercentages: parsedMilestones.map((m) => m.percentage),
+        milestoneDeadlines: parsedMilestones.map((m) => m.deadlineTs)
       });
 
       setStatus(`Job created and sent on-chain. DB Job ID: ${result.job.job_id}`);
@@ -113,6 +164,25 @@ export default function ClientDashboard() {
           />
           <button onClick={browse}>Search</button>
         </div>
+      </div>
+
+      <div className="card">
+        <h3>Your Previous Jobs</h3>
+        <div className="row-actions">
+          <button onClick={loadMyJobs}>Load Previous Jobs</button>
+        </div>
+        {myJobs.length > 0 && (
+          <div className="grid-cards">
+            {myJobs.map((j) => (
+              <article className="card" key={j.job_id}>
+                <h4>{j.title}</h4>
+                <small>Job ID: {j.job_id}</small>
+                <small>Freelancer: {j.freelancer_wallet || "Unassigned"}</small>
+                <small>Created: {new Date(j.created_at).toLocaleString()}</small>
+              </article>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="grid-cards">
@@ -145,6 +215,15 @@ export default function ClientDashboard() {
             required
           />
         </label>
+        <div className="milestone-row milestone-header" aria-hidden="true">
+          <span>Milestone Name</span>
+          <span>Percentage (%)</span>
+          <span>Amount</span>
+          <span>Deadline</span>
+        </div>
+        <p className="milestone-help">
+          Percentages across all milestones must total 100. Amount should match the payout for each milestone.
+        </p>
         {milestones.map((m, idx) => (
           <div className="milestone-row" key={`${idx}-${m.name}`}>
             <input

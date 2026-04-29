@@ -16,12 +16,17 @@ export default function Header({ theme, onToggleTheme }) {
         SkillX
       </Link>
 
-      <nav className="navlinks">
-        <Link to="/role">Role</Link>
-        <Link to="/client">Client</Link>
-        <Link to="/freelancer">Freelancer</Link>
-        <Link to="/profile">Profile</Link>
-      </nav>
+      {isConnected ? (
+        <nav className="navlinks">
+          <Link to="/home">Home</Link>
+          <Link to="/role">Role</Link>
+          <Link to="/client">Client</Link>
+          <Link to="/freelancer">Freelancer</Link>
+          <Link to="/profile">Profile</Link>
+        </nav>
+      ) : (
+        <div />
+      )}
 
       <div className="walletbox">
         <button className="ghost theme-toggle" onClick={onToggleTheme} aria-label="Toggle theme">

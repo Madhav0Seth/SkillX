@@ -5,6 +5,40 @@ const { badRequest, internalError } = require("../utils/http");
 
 const router = express.Router();
 
+router.get("/jobs", async (req, res) => {
+  try {
+    const { freelancer_wallet, client_wallet, limit } = req.query;
+
+    let query = supabase
+      .from("jobs")
+      .select("*")
+      .order("job_id", { ascending: false });
+
+    if (freelancer_wallet) {
+      query = query.or(
+        `freelancer_wallet.eq.${freelancer_wallet},freelancer_wallet.is.null`
+      );
+    }
+
+    if (client_wallet) {
+      query = query.eq("client_wallet", client_wallet);
+    }
+
+    if (limit) {
+      query = query.limit(Number(limit));
+    }
+
+    const { data, error } = await query;
+    if (error) {
+      throw error;
+    }
+
+    return res.json({ jobs: data || [] });
+  } catch (error) {
+    return internalError(res, error);
+  }
+});
+
 router.post("/job", async (req, res) => {
   try {
     const { client_wallet, freelancer_wallet, title, description, milestones } =
@@ -68,6 +102,86 @@ router.post("/job", async (req, res) => {
       job,
       milestones: createdMilestones
     });
+  } catch (error) {
+    return internalError(res, error);
+  }
+});
+
+router.post("/job/:jobId/accept", async (req, res) => {
+  try {
+    const { jobId } = req.params;
+    const { freelancer_wallet } = req.body;
+    if (!jobId || !freelancer_wallet) {
+      return badRequest(res, "jobId and freelancer_wallet are required");
+    }
+
+    const { data: job, error: jobError } = await supabase
+      .from("jobs")
+      .select("*")
+      .eq("job_id", Number(jobId))
+      .single();
+
+    if (jobError) {
+      throw jobError;
+    }
+
+    if (job.freelancer_wallet && job.freelancer_wallet !== freelancer_wallet) {
+      return res.status(409).json({ error: "Job already accepted by another freelancer" });
+    }
+
+    const { data, error } = await supabase
+      .from("jobs")
+      .update({ freelancer_wallet })
+      .eq("job_id", Number(jobId))
+      .select()
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    return res.json({ job: data });
+  } catch (error) {
+    return internalError(res, error);
+  }
+});
+
+router.post("/job/:jobId/reject", async (req, res) => {
+  try {
+    const { jobId } = req.params;
+    const { freelancer_wallet } = req.body;
+    if (!jobId || !freelancer_wallet) {
+      return badRequest(res, "jobId and freelancer_wallet are required");
+    }
+
+    const { data: job, error: jobError } = await supabase
+      .from("jobs")
+      .select("*")
+      .eq("job_id", Number(jobId))
+      .single();
+
+    if (jobError) {
+      throw jobError;
+    }
+
+    if (job.freelancer_wallet && job.freelancer_wallet !== freelancer_wallet) {
+      return res
+        .status(409)
+        .json({ error: "Cannot reject a job accepted by another freelancer" });
+    }
+
+    const { data, error } = await supabase
+      .from("jobs")
+      .update({ freelancer_wallet: null })
+      .eq("job_id", Number(jobId))
+      .select()
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    return res.json({ job: data });
   } catch (error) {
     return internalError(res, error);
   }
