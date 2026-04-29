@@ -5,17 +5,28 @@ Cargo.lock
 
 # --- Node.js / Frontend / Backend ---
 node_modules/
+**/node_modules/
 dist/
+**/dist/
 .next/
 out/
 build/
 .npm
 .eslintcache
+coverage/
+*.tsbuildinfo
+.vite/
+.turbo/
+.parcel-cache/
+pnpm-debug.log*
 
 # --- Environment & Secrets ---
 .env
 .env.local
 .env.*.local
+**/.env
+**/.env.local
+**/.env.*.local
 *.pem
 *.key
 .stellar/
