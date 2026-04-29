@@ -1,38 +1,34 @@
 :root {
   font-family: Inter, system-ui, Arial, sans-serif;
-  --bg: #0b1220;
-  --bg-elevated: #111827;
-  --surface: #1f2937;
-  --surface-2: #243244;
-  --text: #e5e7eb;
-  --muted: #94a3b8;
-  --border: #334155;
-  --primary: #22c55e;
-  --primary-strong: #16a34a;
-  --pill-bg: #1e293b;
-  --pill-text: #93c5fd;
-  --input-bg: #0f172a;
-  --hero-grad-a: #0f172a;
-  --hero-grad-b: #1e293b;
-  --shadow: 0 10px 30px rgba(2, 6, 23, 0.45);
+  --bg: #08050d;
+  --bg-elevated: #120a1f;
+  --surface: #171026;
+  --surface-2: #21143a;
+  --text: #f7e9bf;
+  --muted: #b798ff;
+  --border: #5b3ea8;
+  --primary: #d4af37;
+  --primary-strong: #f1cb57;
+  --pill-bg: #1f1236;
+  --pill-text: #f6d57f;
+  --input-bg: #0f0a1a;
+  --shadow: none;
 }
 
 [data-theme="light"] {
-  --bg: #f3f7fb;
-  --bg-elevated: #ffffff;
-  --surface: #ffffff;
-  --surface-2: #f8fafc;
-  --text: #0f172a;
-  --muted: #475569;
-  --border: #dbe3ee;
-  --primary: #16a34a;
-  --primary-strong: #15803d;
-  --pill-bg: #eef2ff;
-  --pill-text: #3730a3;
-  --input-bg: #ffffff;
-  --hero-grad-a: #ecfeff;
-  --hero-grad-b: #f0fdf4;
-  --shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+  --bg: #08050d;
+  --bg-elevated: #120a1f;
+  --surface: #171026;
+  --surface-2: #21143a;
+  --text: #f7e9bf;
+  --muted: #b798ff;
+  --border: #5b3ea8;
+  --primary: #d4af37;
+  --primary-strong: #f1cb57;
+  --pill-bg: #1f1236;
+  --pill-text: #f6d57f;
+  --input-bg: #0f0a1a;
+  --shadow: none;
 }
 
 * {
@@ -41,7 +37,7 @@
 
 body {
   margin: 0;
-  background: radial-gradient(circle at top right, #0f172a 0%, var(--bg) 40%);
+  background: var(--bg);
   color: var(--text);
 }
 
@@ -82,7 +78,7 @@ body {
 }
 
 .navlinks a:hover {
-  color: var(--text);
+  color: var(--primary);
 }
 
 .walletbox {
@@ -107,7 +103,7 @@ body {
 }
 
 .hero {
-  background: linear-gradient(130deg, var(--hero-grad-a), var(--hero-grad-b));
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 14px;
   padding: 32px;
@@ -127,7 +123,7 @@ body {
 }
 
 .card {
-  background: linear-gradient(180deg, var(--surface), var(--surface-2));
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 16px;
@@ -139,7 +135,7 @@ body {
 
 .grid-form {
   margin-top: 16px;
-  background: linear-gradient(180deg, var(--surface), var(--surface-2));
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 16px;
@@ -213,7 +209,7 @@ button:hover,
 }
 
 .status {
-  color: #34d399;
+  color: var(--primary-strong);
 }
 
 small {
