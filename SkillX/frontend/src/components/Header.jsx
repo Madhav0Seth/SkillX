@@ -24,8 +24,8 @@ export default function Header({ theme, onToggleTheme }) {
       </nav>
 
       <div className="walletbox">
-        <button className="ghost" onClick={onToggleTheme}>
-          {theme === "dark" ? "Light" : "Dark"} Mode
+        <button className="ghost theme-toggle" onClick={onToggleTheme} aria-label="Toggle theme">
+          {theme === "dark" ? "☀️" : "🌙"}
         </button>
         {isConnected ? (
           <>
