@@ -17,17 +17,21 @@ export default function RolePage() {
       setMessage("Connect your wallet first.");
       return;
     }
-    await api.createProfile({
-      wallet_address: address,
-      role,
-      skills: skills
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean),
-      bio,
-      portfolio
-    });
-    setMessage("Profile saved.");
+    try {
+      await api.createProfile({
+        wallet_address: address,
+        role,
+        skills: skills
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean),
+        bio,
+        portfolio
+      });
+      setMessage("Profile saved.");
+    } catch (error) {
+      setMessage(`Failed to save profile: ${error.message}`);
+    }
   };
 
   return (

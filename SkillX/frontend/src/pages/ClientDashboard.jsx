@@ -31,8 +31,16 @@ export default function ClientDashboard() {
   const [status, setStatus] = useState("");
 
   const browse = async () => {
-    const result = await api.getFreelancers(category);
-    setFreelancers(result.freelancers || []);
+    setStatus("");
+    try {
+      const result = await api.getFreelancers(category);
+      setFreelancers(result.freelancers || []);
+      if (!result.freelancers?.length) {
+        setStatus("No freelancers found for this category.");
+      }
+    } catch (error) {
+      setStatus(`Search failed: ${error.message}`);
+    }
   };
 
   const addMilestone = () => setMilestones((prev) => [...prev, emptyMilestone()]);

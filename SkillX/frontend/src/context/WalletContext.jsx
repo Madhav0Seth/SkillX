@@ -8,6 +8,12 @@ import {
 
 const WalletContext = createContext(null);
 
+function normalizeFreighterAddress(result) {
+  if (!result) return "";
+  if (typeof result === "string") return result;
+  return result.address || result.publicKey || "";
+}
+
 export function WalletProvider({ children }) {
   const [address, setAddress] = useState("");
   const [loading, setLoading] = useState(false);
@@ -32,7 +38,11 @@ export function WalletProvider({ children }) {
         throw new Error(addressResult.error);
       }
 
-      setAddress(addressResult.address);
+      const walletAddress = normalizeFreighterAddress(addressResult);
+      if (!walletAddress) {
+        throw new Error("Freighter did not return a wallet address");
+      }
+      setAddress(walletAddress);
     } catch (err) {
       setError(err.message || "Failed to connect wallet");
     } finally {

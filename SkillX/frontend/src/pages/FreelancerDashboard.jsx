@@ -15,8 +15,15 @@ export default function FreelancerDashboard() {
 
   const loadJob = async () => {
     if (!jobId) return;
-    const result = await api.getJob(jobId);
-    setJob(result.job);
+    setStatus("");
+    try {
+      const result = await api.getJob(jobId);
+      setJob(result.job);
+      setStatus(`Loaded job ${result.job.job_id}.`);
+    } catch (error) {
+      setStatus(`Load failed: ${error.message}`);
+      setJob(null);
+    }
   };
 
   const acceptJob = async (selectedJob) => {

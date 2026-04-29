@@ -1,10 +1,16 @@
 const express = require("express");
+const cors = require("cors");
 const profileRoutes = require("./routes/profileRoutes");
 const jobRoutes = require("./routes/jobRoutes");
 const submissionRoutes = require("./routes/submissionRoutes");
 
 const app = express();
 
+app.use(
+  cors({
+    origin: true
+  })
+);
 app.use(express.json());
 
 app.get("/health", (_req, res) => {

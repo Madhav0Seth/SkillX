@@ -1,8 +1,10 @@
 import { getAddress, signTransaction } from "@stellar/freighter-api";
 import {
+  Address,
   Contract,
   Networks,
   rpc,
+  StrKey,
   TransactionBuilder,
   nativeToScVal,
   xdr
@@ -21,16 +23,37 @@ function getServer() {
   return new rpc.Server(rpcUrl);
 }
 
-async function buildAndSendContractTx(contractId, method, args = []) {
+function ensureContractId(contractId) {
   if (!contractId) {
     throw new Error("Missing contract ID in frontend .env");
   }
+  if (!StrKey.isValidContract(contractId)) {
+    throw new Error(`Invalid contract ID format: ${contractId}`);
+  }
+}
+
+function ensureStellarAddress(address) {
+  if (!address || !StrKey.isValidEd25519PublicKey(address)) {
+    throw new Error(`Invalid Stellar address: ${address || "undefined"}`);
+  }
+}
+
+function normalizeFreighterAddress(result) {
+  if (!result) return "";
+  if (typeof result === "string") return result;
+  return result.address || result.publicKey || "";
+}
+
+async function buildAndSendContractTx(contractId, method, args = []) {
+  ensureContractId(contractId);
 
   const server = getServer();
-  const addr = await getAddress();
-  if (addr.error) throw new Error(addr.error);
+  const addressResult = await getAddress();
+  if (addressResult.error) throw new Error(addressResult.error);
+  const walletAddress = normalizeFreighterAddress(addressResult);
+  ensureStellarAddress(walletAddress);
 
-  const account = await server.getAccount(addr.address);
+  const account = await server.getAccount(walletAddress);
   const contract = new Contract(contractId);
   const operation = contract.call(method, ...args);
 
@@ -74,10 +97,11 @@ export const contracts = {
     milestonePercentages,
     milestoneDeadlines
   }) {
+    ensureStellarAddress(clientAddress);
     const args = [
       hexToBytesScVal(jobIdHex),
       hexToBytesScVal(jobHashHex),
-      nativeToScVal(clientAddress, { type: "address" }),
+      Address.fromString(clientAddress).toScVal(),
       nativeToScVal(totalAmount, { type: "i128" }),
       xdr.ScVal.scvVec((milestoneHashesHex || []).map((h) => hexToBytesScVal(h))),
       xdr.ScVal.scvVec(
@@ -90,9 +114,10 @@ export const contracts = {
     return buildAndSendContractTx(jobManagerContractId, "create_job", args);
   },
   async acceptJobOnChain(jobIdHex, freelancerAddress) {
+    ensureStellarAddress(freelancerAddress);
     const args = [
       hexToBytesScVal(jobIdHex),
-      nativeToScVal(freelancerAddress, { type: "address" })
+      Address.fromString(freelancerAddress).toScVal()
     ];
     return buildAndSendContractTx(jobManagerContractId, "accept_job", args);
   },
@@ -104,9 +129,10 @@ export const contracts = {
     return buildAndSendContractTx(jobManagerContractId, "submit_milestone", args);
   },
   async depositEscrowOnChain(jobIdHex, clientAddress, amount) {
+    ensureStellarAddress(clientAddress);
     const args = [
       hexToBytesScVal(jobIdHex),
-      nativeToScVal(clientAddress, { type: "address" }),
+      Address.fromString(clientAddress).toScVal(),
       nativeToScVal(amount, { type: "i128" })
     ];
     return buildAndSendContractTx(escrowContractId, "deposit", args);
