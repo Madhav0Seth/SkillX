@@ -19,7 +19,10 @@ async function request(path, options = {}) {
     : { error: await res.text() };
 
   if (!res.ok) {
-    throw new Error(data.error || "API request failed");
+    const message = data.details
+      ? `${data.error} - ${data.details}`
+      : data.error || "API request failed";
+    throw new Error(message);
   }
 
   return data;
@@ -31,6 +34,9 @@ export const api = {
       method: "POST",
       body: JSON.stringify(payload)
     });
+  },
+  getProfile(walletAddress) {
+    return request(`/profile/${encodeURIComponent(walletAddress)}`);
   },
   getFreelancers(category) {
     const q = category ? `?category=${encodeURIComponent(category)}` : "";
@@ -52,6 +58,9 @@ export const api = {
     }
     if (params.limit) {
       search.set("limit", String(params.limit));
+    }
+    if (params.scope) {
+      search.set("scope", params.scope);
     }
     const q = search.toString();
     return request(`/jobs${q ? `?${q}` : ""}`);

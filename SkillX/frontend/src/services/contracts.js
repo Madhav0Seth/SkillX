@@ -23,12 +23,14 @@ function getServer() {
   return new rpc.Server(rpcUrl);
 }
 
-function ensureContractId(contractId) {
+function ensureContractId(contractId, envName) {
   if (!contractId) {
-    throw new Error("Missing contract ID in frontend .env");
+    throw new Error(
+      `Missing ${envName} in frontend .env. Add it to SkillX/frontend/.env and restart the frontend dev server.`
+    );
   }
   if (!StrKey.isValidContract(contractId)) {
-    throw new Error(`Invalid contract ID format: ${contractId}`);
+    throw new Error(`Invalid ${envName} contract ID format: ${contractId}`);
   }
 }
 
@@ -44,8 +46,8 @@ function normalizeFreighterAddress(result) {
   return result.address || result.publicKey || "";
 }
 
-async function buildAndSendContractTx(contractId, method, args = []) {
-  ensureContractId(contractId);
+async function buildAndSendContractTx(contractId, envName, method, args = []) {
+  ensureContractId(contractId, envName);
 
   const server = getServer();
   const addressResult = await getAddress();
@@ -88,6 +90,12 @@ function hexToBytesScVal(hex) {
 }
 
 export const contracts = {
+  ensureJobManagerConfigured() {
+    ensureContractId(jobManagerContractId, "VITE_JOB_MANAGER_CONTRACT_ID");
+  },
+  ensureEscrowConfigured() {
+    ensureContractId(escrowContractId, "VITE_ESCROW_CONTRACT_ID");
+  },
   async createJobOnChain({
     jobIdHex,
     jobHashHex,
@@ -111,7 +119,12 @@ export const contracts = {
         (milestoneDeadlines || []).map((d) => nativeToScVal(d, { type: "u64" }))
       )
     ];
-    return buildAndSendContractTx(jobManagerContractId, "create_job", args);
+    return buildAndSendContractTx(
+      jobManagerContractId,
+      "VITE_JOB_MANAGER_CONTRACT_ID",
+      "create_job",
+      args
+    );
   },
   async acceptJobOnChain(jobIdHex, freelancerAddress) {
     ensureStellarAddress(freelancerAddress);
@@ -119,14 +132,24 @@ export const contracts = {
       hexToBytesScVal(jobIdHex),
       Address.fromString(freelancerAddress).toScVal()
     ];
-    return buildAndSendContractTx(jobManagerContractId, "accept_job", args);
+    return buildAndSendContractTx(
+      jobManagerContractId,
+      "VITE_JOB_MANAGER_CONTRACT_ID",
+      "accept_job",
+      args
+    );
   },
   async submitMilestoneOnChain(jobIdHex, milestoneIndex) {
     const args = [
       hexToBytesScVal(jobIdHex),
       nativeToScVal(milestoneIndex, { type: "u32" })
     ];
-    return buildAndSendContractTx(jobManagerContractId, "submit_milestone", args);
+    return buildAndSendContractTx(
+      jobManagerContractId,
+      "VITE_JOB_MANAGER_CONTRACT_ID",
+      "submit_milestone",
+      args
+    );
   },
   async depositEscrowOnChain(jobIdHex, clientAddress, amount) {
     ensureStellarAddress(clientAddress);
@@ -135,6 +158,11 @@ export const contracts = {
       Address.fromString(clientAddress).toScVal(),
       nativeToScVal(amount, { type: "i128" })
     ];
-    return buildAndSendContractTx(escrowContractId, "deposit", args);
+    return buildAndSendContractTx(
+      escrowContractId,
+      "VITE_ESCROW_CONTRACT_ID",
+      "deposit",
+      args
+    );
   }
 };

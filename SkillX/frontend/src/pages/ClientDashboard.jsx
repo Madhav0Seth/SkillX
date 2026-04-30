@@ -7,10 +7,18 @@ import FreelancerCard from "../components/FreelancerCard";
 function emptyMilestone() {
   return {
     name: "",
-    percentage: 0,
+    percentage: 100,
     amount: 0,
     deadline: ""
   };
+}
+
+function distributePercentages(count) {
+  const base = Math.floor(100 / count);
+  const remainder = 100 % count;
+  return Array.from({ length: count }, (_, idx) =>
+    idx < remainder ? base + 1 : base
+  );
 }
 
 async function sha256Hex(input) {
@@ -61,7 +69,15 @@ export default function ClientDashboard() {
     }
   };
 
-  const addMilestone = () => setMilestones((prev) => [...prev, emptyMilestone()]);
+  const addMilestone = () =>
+    setMilestones((prev) => {
+      const next = [...prev, emptyMilestone()];
+      const percentages = distributePercentages(next.length);
+      return next.map((milestone, idx) => ({
+        ...milestone,
+        percentage: percentages[idx]
+      }));
+    });
 
   const updateMilestone = (idx, key, value) => {
     setMilestones((prev) =>
@@ -77,6 +93,13 @@ export default function ClientDashboard() {
       return;
     }
     try {
+      try {
+        await api.getProfile(address);
+      } catch (_error) {
+        setStatus("Please register on the Role page before creating jobs.");
+        return;
+      }
+
       if (freelancerWallet && freelancerWallet === address) {
         setStatus("Client and freelancer cannot be the same wallet.");
         return;
@@ -133,18 +156,27 @@ export default function ClientDashboard() {
         )
       );
 
-      await contracts.createJobOnChain({
-        // Temporary mapping: use backend job_hash as deterministic on-chain job_id.
-        jobIdHex: result.job.job_hash,
-        jobHashHex: result.job.job_hash,
-        clientAddress: address,
-        totalAmount: parsedMilestones.reduce((sum, m) => sum + m.amount, 0),
-        milestoneHashesHex: milestoneHashes,
-        milestonePercentages: parsedMilestones.map((m) => m.percentage),
-        milestoneDeadlines: parsedMilestones.map((m) => m.deadlineTs)
-      });
+      try {
+        await contracts.createJobOnChain({
+          // Temporary mapping: use backend job_hash as deterministic on-chain job_id.
+          jobIdHex: result.job.job_hash,
+          jobHashHex: result.job.job_hash,
+          clientAddress: address,
+          totalAmount: parsedMilestones.reduce((sum, m) => sum + m.amount, 0),
+          milestoneHashesHex: milestoneHashes,
+          milestonePercentages: parsedMilestones.map((m) => m.percentage),
+          milestoneDeadlines: parsedMilestones.map((m) => m.deadlineTs)
+        });
 
-      setStatus(`Job created and sent on-chain. DB Job ID: ${result.job.job_id}`);
+        setStatus(`Job created and sent on-chain. DB Job ID: ${result.job.job_id}`);
+      } catch (contractError) {
+        const contractMessage = contractError.message.includes("VITE_JOB_MANAGER_CONTRACT_ID")
+          ? "Job Manager contract ID is not configured."
+          : contractError.message;
+        setStatus(
+          `Job created in database. On-chain creation skipped: ${contractMessage}`
+        );
+      }
     } catch (error) {
       setStatus(`Create failed: ${error.message}`);
     }
@@ -225,7 +257,7 @@ export default function ClientDashboard() {
           Percentages across all milestones must total 100. Amount should match the payout for each milestone.
         </p>
         {milestones.map((m, idx) => (
-          <div className="milestone-row" key={`${idx}-${m.name}`}>
+          <div className="milestone-row" key={`milestone-${idx}`}>
             <input
               placeholder="Milestone name"
               value={m.name}

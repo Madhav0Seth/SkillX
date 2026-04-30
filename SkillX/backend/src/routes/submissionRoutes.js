@@ -13,6 +13,44 @@ router.post("/submit", async (req, res) => {
       return badRequest(res, "milestone_id and file_url are required");
     }
 
+    const { data: milestone, error: milestoneFetchError } = await supabase
+      .from("milestones")
+      .select("milestone_id, job_id, status")
+      .eq("milestone_id", milestone_id)
+      .single();
+
+    if (milestoneFetchError) {
+      throw milestoneFetchError;
+    }
+
+    if (milestone.status !== "pending") {
+      return badRequest(res, `Milestone is already ${milestone.status}`);
+    }
+
+    const { data: jobMilestones, error: jobMilestonesError } = await supabase
+      .from("milestones")
+      .select("milestone_id, status")
+      .eq("job_id", milestone.job_id)
+      .order("milestone_id", { ascending: true });
+
+    if (jobMilestonesError) {
+      throw jobMilestonesError;
+    }
+
+    const milestoneIndex = (jobMilestones || []).findIndex(
+      (item) => Number(item.milestone_id) === Number(milestone_id)
+    );
+    const previousIncomplete = (jobMilestones || [])
+      .slice(0, milestoneIndex)
+      .find((item) => item.status !== "approved");
+
+    if (previousIncomplete) {
+      return badRequest(
+        res,
+        "Submit milestones in order. Previous milestones must be approved and paid first."
+      );
+    }
+
     const submissionHash = sha256(
       JSON.stringify({
         milestone_id,

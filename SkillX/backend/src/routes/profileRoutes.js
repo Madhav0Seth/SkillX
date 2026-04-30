@@ -36,6 +36,35 @@ router.post("/profile", async (req, res) => {
   }
 });
 
+router.get("/profile/:walletAddress", async (req, res) => {
+  try {
+    const { walletAddress } = req.params;
+
+    if (!walletAddress) {
+      return badRequest(res, "walletAddress is required");
+    }
+
+    const { data, error } = await supabase
+      .from("users")
+      .select("wallet_address, role, skills, bio, portfolio")
+      .eq("wallet_address", walletAddress)
+      .single();
+
+    if (error) {
+      if (error.code === "PGRST116") {
+        return res.status(404).json({
+          error: "Profile not found. Please register on the Role page first.",
+        });
+      }
+      throw error;
+    }
+
+    return res.json({ profile: data });
+  } catch (error) {
+    return internalError(res, error);
+  }
+});
+
 router.get("/freelancers", async (req, res) => {
   try {
     const { category } = req.query;

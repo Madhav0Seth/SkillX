@@ -7,7 +7,7 @@ const router = express.Router();
 
 router.get("/jobs", async (req, res) => {
   try {
-    const { freelancer_wallet, client_wallet, limit } = req.query;
+    const { freelancer_wallet, client_wallet, limit, scope } = req.query;
 
     let query = supabase
       .from("jobs")
@@ -15,9 +15,17 @@ router.get("/jobs", async (req, res) => {
       .order("job_id", { ascending: false });
 
     if (freelancer_wallet) {
-      query = query.or(
-        `freelancer_wallet.eq.${freelancer_wallet},freelancer_wallet.is.null`
-      );
+      if (scope === "assigned") {
+        query = query.eq("freelancer_wallet", freelancer_wallet);
+      } else if (scope === "open") {
+        query = query.is("freelancer_wallet", null);
+      } else {
+        query = query.or(
+          `freelancer_wallet.eq.${freelancer_wallet},freelancer_wallet.is.null`
+        );
+      }
+    } else if (scope === "open") {
+      query = query.is("freelancer_wallet", null);
     }
 
     if (client_wallet) {
@@ -51,12 +59,41 @@ router.post("/job", async (req, res) => {
       );
     }
 
+    // 1. Verify client has a profile
+    const { data: clientProfile, error: clientProfileError } = await supabase
+      .from("users")
+      .select("wallet_address")
+      .eq("wallet_address", client_wallet)
+      .single();
+
+    if (clientProfileError || !clientProfile) {
+      return res.status(403).json({
+        error: "Client profile not found. Please create a profile first.",
+      });
+    }
+
+    // 2. Verify freelancer profile if wallet provided
+    if (freelancer_wallet) {
+      const { data: freelancerProfile, error: freelancerProfileError } =
+        await supabase
+          .from("users")
+          .select("wallet_address")
+          .eq("wallet_address", freelancer_wallet)
+          .single();
+
+      if (freelancerProfileError || !freelancerProfile) {
+        return res.status(400).json({
+          error: "Selected freelancer profile not found in our system.",
+        });
+      }
+    }
+
     const jobHash = sha256(
       JSON.stringify({
         client_wallet,
         freelancer_wallet: freelancer_wallet || null,
         title,
-        description
+        description,
       })
     );
 
@@ -67,7 +104,7 @@ router.post("/job", async (req, res) => {
         freelancer_wallet: freelancer_wallet || null,
         title,
         description,
-        job_hash: jobHash
+        job_hash: jobHash,
       })
       .select()
       .single();
@@ -81,10 +118,10 @@ router.post("/job", async (req, res) => {
       const milestoneRows = milestones.map((milestone) => ({
         job_id: job.job_id,
         name: milestone.name,
-        percentage: milestone.percentage,
-        amount: milestone.amount,
+        percentage: Number(milestone.percentage),
+        amount: Number(milestone.amount),
         deadline: milestone.deadline,
-        status: milestone.status || "pending"
+        status: milestone.status || "pending",
       }));
 
       const { data, error } = await supabase
@@ -100,7 +137,7 @@ router.post("/job", async (req, res) => {
 
     return res.status(201).json({
       job,
-      milestones: createdMilestones
+      milestones: createdMilestones,
     });
   } catch (error) {
     return internalError(res, error);
@@ -127,6 +164,19 @@ router.post("/job/:jobId/accept", async (req, res) => {
 
     if (job.freelancer_wallet && job.freelancer_wallet !== freelancer_wallet) {
       return res.status(409).json({ error: "Job already accepted by another freelancer" });
+    }
+
+    const { data: freelancerProfile, error: freelancerProfileError } =
+      await supabase
+        .from("users")
+        .select("wallet_address")
+        .eq("wallet_address", freelancer_wallet)
+        .single();
+
+    if (freelancerProfileError || !freelancerProfile) {
+      return res.status(403).json({
+        error: "Freelancer profile not found. Please register before accepting jobs.",
+      });
     }
 
     const { data, error } = await supabase

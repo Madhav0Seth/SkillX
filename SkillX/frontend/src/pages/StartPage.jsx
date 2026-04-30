@@ -14,9 +14,10 @@ export default function StartPage() {
         <span className="orbit orbit-a" />
         <span className="orbit orbit-b" />
         <span className="orbit orbit-c" />
+        <div className="pulse-core" />
       </div>
       <div className="start-card">
-        <h1>SkillX</h1>
+        <h1 className="start-logo">SkillX</h1>
         <p>Connect your Freighter wallet to continue.</p>
         <button onClick={connectWallet} disabled={loading}>
           {loading ? "Connecting..." : "Connect Freighter"}
