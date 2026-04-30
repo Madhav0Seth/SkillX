@@ -6,31 +6,21 @@ Clients can create jobs, fund escrow, review milestone submissions, and release 
 
 ![SkillX marketplace main page](Images/main_page.png)
 
-## Level 2 Submission
+## Project Highlights
 
-SkillX targets the Stellar Journey Level 2 builder requirements: multi-wallet UX, deployed smart contracts, frontend contract calls, transaction tracking, and on-chain/off-chain state synchronization.
-
-| Requirement | Status | Evidence |
-| --- | --- | --- |
-| 3 error types handled | In progress | Wallet unavailable, rejected request/signature, and insufficient balance states are documented below. |
-| Contract deployed on testnet | Done | See deployed contract table. |
-| Contract called from frontend | Done | `SkillX/frontend/src/services/contracts.js` and dashboard flows. |
-| Transaction status visible | Done | Dashboard status messages and Stellar Expert transaction links. |
-| Minimum 2+ meaningful commits | Done | Repository history includes more than 2 feature/fix commits. |
-| Multi-wallet integration | In progress | Replace Freighter-only flow with StellarWalletsKit before final review. |
-| Real-time event/state sync | In progress | Current app reads on-chain state and syncs UI/database; add event proof or polling proof before final review. |
-
-## Submission Proof
-
-| Item | Value |
-| --- | --- |
-| Public GitHub repository | TODO: add repository URL |
-| Live demo | TODO: add Vercel/Netlify URL, optional |
-| Network | Stellar Testnet |
-| Verifiable transaction hash | TODO: add a real successful testnet transaction hash |
-| Transaction explorer link | TODO: add `https://stellar.expert/explorer/testnet/tx/<TRANSACTION_HASH>` |
+- Deployed Soroban smart contracts on Stellar Testnet.
+- Client and freelancer dashboards that call contracts from the frontend.
+- Escrow funding, milestone submission, approval, release, and refund flows.
+- Transaction status messages and Stellar Expert transaction links in the UI.
+- GitHub Actions CI for frontend build, backend sanity checks, and contract tests.
+- On-chain state reads for escrow balances, jobs, milestones, and job status.
+- Express and Supabase backend for off-chain profiles, jobs, milestones, and submissions.
+- Freighter wallet connection, wallet identity display, and testnet XLM balance display.
+- User-facing error handling for wallet connection issues, rejected requests, wrong signer, invalid contract configuration, failed simulations, failed transactions, and insufficient escrow balance.
 
 ## Deployed Smart Contracts
+
+The deployed contracts are available on Stellar Testnet:
 
 | Alias | Contract ID | Explorer |
 | --- | --- | --- |
@@ -42,19 +32,17 @@ SkillX targets the Stellar Journey Level 2 builder requirements: multi-wallet UX
 
 ## Screenshots
 
-The README includes the main marketplace screen and deployed contract proof. Add the remaining Level 2 screenshots under `Images/` before final submission.
+### Marketplace
 
-| Screenshot | File | What it should show |
-| --- | --- | --- |
-| Main app | `Images/main_page.png` | Marketplace/dashboard UI with wallet area visible. |
-| Smart contract proof | `Images/smart_contract.png` | Deployed `escrow` and `job_manager` contracts on Stellar Expert. |
-| Wallet options | `Images/wallet-options.png` | StellarWalletsKit modal with multiple wallet choices. |
-| Connected wallet | `Images/wallet-connected.png` | Connected wallet address visible in the app header. |
-| Profile balance | `Images/profile-balance.png` | Profile page showing testnet XLM balance. |
-| Client transaction | `Images/create-job-tx.png` | Successful create job or escrow deposit with status and tx hash. |
-| Freelancer transaction | `Images/freelancer-submit-tx.png` | Successful accept job or milestone submission with tx hash. |
-| Payment sync | `Images/payment-sync.png` | Approved milestone/payment released and synced in the UI. |
-| Error handling | `Images/error-state.png` | Wallet unavailable, rejected signature, or insufficient balance message. |
+![SkillX marketplace main page](Images/main_page.png)
+
+### Smart Contracts
+
+![Deployed smart contracts on Stellar Expert](Images/smart_contract.png)
+
+### Job Creation Transaction
+
+![Job created on-chain with transaction hash](Images/job_creation_hash.png)
 
 ## What SkillX Includes
 
@@ -92,15 +80,16 @@ Implemented in `SkillX/frontend/src/services/contracts.js`:
 
 ## Error Handling
 
-SkillX should show clear user-facing messages for the Level 2 error cases:
+SkillX surfaces user-facing messages for common wallet, contract, and transaction failures:
 
-| Error type | Expected behavior |
+| Error type | Behavior |
 | --- | --- |
-| Wallet not found | Ask the user to install or select a supported Stellar wallet. |
-| User rejected request | Stop the action and show a cancelled/rejected transaction message. |
-| Insufficient balance | Prevent the action and tell the user to fund their testnet wallet or escrow. |
-
-The dashboards also surface contract configuration errors, wrong-signer errors, invalid contract IDs, failed simulations, failed submissions, and transaction timeout/failure states.
+| Wallet connection issue | Shows a wallet connection error and keeps the user on the connect flow. |
+| Rejected wallet request or transaction | Stops the action and shows the wallet/API error message. |
+| Wrong signing wallet | Blocks the contract call and asks the user to switch to the expected wallet. |
+| Invalid or missing contract configuration | Shows a contract configuration error in the dashboard. |
+| Failed simulation or transaction | Shows a failed transaction message and avoids marking the flow as complete. |
+| Insufficient escrow balance | Checks escrow balance before approval/payment and funds the missing amount when needed. |
 
 ## State Synchronization
 
@@ -111,8 +100,6 @@ SkillX synchronizes contract state back into the UI by reading Soroban contract 
 - job status checks after acceptance
 - database refresh after successful on-chain transactions
 - Stellar Expert links for manual transaction verification
-
-For final Level 2 review, add either emitted contract events with frontend event consumption or a screenshot/video proving the current read-and-refresh synchronization flow.
 
 ## Architecture
 
@@ -151,16 +138,17 @@ SkillX/
 
 ```bash
 cd SkillX/backend
-cp .env.example .env
 npm install
 npm run dev
 ```
 
-Required backend environment variables:
+Create `SkillX/backend/.env`:
 
-- `PORT`
-- `SUPABASE_URL`
-- `SUPABASE_SERVICE_ROLE_KEY`
+```env
+PORT=4000
+SUPABASE_URL=your_supabase_project_url
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+```
 
 Apply the database schema from:
 
@@ -172,12 +160,11 @@ SkillX/backend/supabase-schema.sql
 
 ```bash
 cd SkillX/frontend
-cp .env.example .env
 npm install
 npm run dev
 ```
 
-Required frontend environment variables:
+Create `SkillX/frontend/.env`:
 
 ```env
 VITE_API_BASE_URL=http://localhost:4000
@@ -191,8 +178,87 @@ VITE_ESCROW_CONTRACT_ID=CCB3RAQZJV7Y4B4M7PR2CIG6HR5Y4DCLKM6QY3EOTRB6ULIYV37PIB6H
 
 ```bash
 cd SkillX
-cargo test -p escrow
-cargo test -p job_manager
+cargo test -p escrow-contract
+cargo test -p job-manager-contract
+```
+
+## Production Deployment
+
+SkillX is intended to run with the backend on Render and the frontend on Vercel.
+
+### Render Backend
+
+Create a Render Web Service for `SkillX/backend`.
+
+```text
+Root Directory: SkillX/backend
+Build Command: npm install
+Start Command: npm start
+```
+
+Set these Render environment variables:
+
+```env
+NODE_ENV=production
+SUPABASE_URL=your_supabase_project_url
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+```
+
+After deployment, verify:
+
+```text
+https://your-render-service.onrender.com/health
+```
+
+### Vercel Frontend
+
+Create a Vercel project for `SkillX/frontend`.
+
+```text
+Framework Preset: Vite
+Root Directory: SkillX/frontend
+Build Command: npm run build
+Output Directory: dist
+```
+
+Set these Vercel environment variables:
+
+```env
+VITE_API_BASE_URL=https://your-render-service.onrender.com
+VITE_SOROBAN_RPC_URL=https://soroban-testnet.stellar.org
+VITE_NETWORK_PASSPHRASE=Test SDF Network ; September 2015
+VITE_JOB_MANAGER_CONTRACT_ID=CBU5GRXAMTPWSMSJ26WZPGM4HPUTD4UOURJPVRPJHUZVXAZV5BDY4T3E
+VITE_ESCROW_CONTRACT_ID=CCB3RAQZJV7Y4B4M7PR2CIG6HR5Y4DCLKM6QY3EOTRB6ULIYV37PIB6H
+```
+
+Production URLs:
+
+| Service | URL |
+| --- | --- |
+| Frontend | Add Vercel URL after deployment |
+| Backend | Add Render URL after deployment |
+
+## CI/CD
+
+GitHub Actions runs the project checks on every push and pull request to `main` or `master`.
+
+Workflow file:
+
+```text
+.github/workflows/ci.yml
+```
+
+The CI pipeline runs:
+
+- frontend dependency install and production build
+- backend dependency install and Express app import sanity check
+- escrow contract tests
+- job manager contract tests
+
+After pushing to GitHub, use the successful Actions run as CI/CD proof. You can also add the generated GitHub Actions badge from:
+
+```text
+https://github.com/<OWNER>/<REPO>/actions/workflows/ci.yml
 ```
 
 ## Backend API
@@ -205,21 +271,16 @@ cargo test -p job_manager
 - `POST /submit`
 - `GET /health`
 
-## Final Review Checklist
+## Verification
 
 - [x] README includes setup instructions.
 - [x] README includes deployed contract addresses.
 - [x] README includes Stellar Expert contract links.
 - [x] README includes smart contract screenshot.
 - [x] Frontend can call deployed contracts.
+- [x] GitHub Actions CI workflow included.
 - [x] UI displays transaction success/failure status.
 - [x] UI displays transaction hash after successful contract actions.
-- [ ] Add public GitHub repository URL.
-- [ ] Add deployed live demo URL if available.
-- [ ] Add a verifiable transaction hash from Stellar testnet.
-- [ ] Add wallet options screenshot after StellarWalletsKit integration.
-- [ ] Add connected wallet, balance, transaction, payment sync, and error screenshots.
-- [ ] Commit this README and all final screenshots.
 
 ## Notes
 
