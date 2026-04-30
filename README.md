@@ -14,8 +14,6 @@ Clients can create jobs, fund escrow, review milestone submissions, and release 
 | --- | --- |
 | GitHub repository | [github.com/Madhav0Seth/SkillX](https://github.com/Madhav0Seth/SkillX) |
 | Live app | [skill-x-nu.vercel.app](https://skill-x-nu.vercel.app/) |
-| Backend API | [skillx-tqzb.onrender.com](https://skillx-tqzb.onrender.com) |
-| Health check | [skillx-tqzb.onrender.com/health](https://skillx-tqzb.onrender.com/health) |
 | Demo video | [YouTube demo](https://youtu.be/GMjDWeJ5AYQ) |
 
 ## Project Highlights
@@ -45,6 +43,11 @@ The deployed contracts are available on Stellar Testnet:
 ![Deployed smart contracts on Stellar Expert](Images/smart_contract.png)
 
 ## Screenshots
+
+
+### Mobile View
+![Mobile View](./Images/MobileResponsive.png)
+
 
 ### Marketplace
 
