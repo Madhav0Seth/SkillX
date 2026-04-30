@@ -1,14 +1,28 @@
 # SkillX
 
+[![CI](https://github.com/Madhav0Seth/SkillX/actions/workflows/ci.yml/badge.svg)](https://github.com/Madhav0Seth/SkillX/actions/workflows/ci.yml)
+
 SkillX is a decentralized freelance marketplace on Stellar where client payments are locked in Soroban escrow and released to freelancers as milestones are completed.
 
 Clients can create jobs, fund escrow, review milestone submissions, and release payment. Freelancers can browse jobs, accept work, submit milestones, and track payment status from the frontend.
 
 ![SkillX marketplace main page](Images/main_page.png)
 
+## Live Links
+
+| Resource | Link |
+| --- | --- |
+| GitHub repository | [github.com/Madhav0Seth/SkillX](https://github.com/Madhav0Seth/SkillX) |
+| Live app | [skill-x-nu.vercel.app](https://skill-x-nu.vercel.app/) |
+| Backend API | [skillx-tqzb.onrender.com](https://skillx-tqzb.onrender.com) |
+| Health check | [skillx-tqzb.onrender.com/health](https://skillx-tqzb.onrender.com/health) |
+| Demo video | [YouTube demo](https://youtu.be/GMjDWeJ5AYQ) |
+
 ## Project Highlights
 
 - Deployed Soroban smart contracts on Stellar Testnet.
+- Production frontend deployed on Vercel.
+- Production backend deployed on Render.
 - Client and freelancer dashboards that call contracts from the frontend.
 - Escrow funding, milestone submission, approval, release, and refund flows.
 - Transaction status messages and Stellar Expert transaction links in the UI.
@@ -184,11 +198,16 @@ cargo test -p job-manager-contract
 
 ## Production Deployment
 
-SkillX is intended to run with the backend on Render and the frontend on Vercel.
+SkillX runs with the backend on Render and the frontend on Vercel.
+
+| Service | URL |
+| --- | --- |
+| Frontend | [https://skill-x-nu.vercel.app/](https://skill-x-nu.vercel.app/) |
+| Backend | [https://skillx-tqzb.onrender.com](https://skillx-tqzb.onrender.com) |
 
 ### Render Backend
 
-Create a Render Web Service for `SkillX/backend`.
+The Render service is deployed from `SkillX/backend`.
 
 ```text
 Root Directory: SkillX/backend
@@ -204,15 +223,15 @@ SUPABASE_URL=your_supabase_project_url
 SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 ```
 
-After deployment, verify:
+Health check:
 
 ```text
-https://your-render-service.onrender.com/health
+https://skillx-tqzb.onrender.com/health
 ```
 
 ### Vercel Frontend
 
-Create a Vercel project for `SkillX/frontend`.
+The Vercel app is deployed from `SkillX/frontend`.
 
 ```text
 Framework Preset: Vite
@@ -224,19 +243,12 @@ Output Directory: dist
 Set these Vercel environment variables:
 
 ```env
-VITE_API_BASE_URL=https://your-render-service.onrender.com
+VITE_API_BASE_URL=https://skillx-tqzb.onrender.com
 VITE_SOROBAN_RPC_URL=https://soroban-testnet.stellar.org
 VITE_NETWORK_PASSPHRASE=Test SDF Network ; September 2015
 VITE_JOB_MANAGER_CONTRACT_ID=CBU5GRXAMTPWSMSJ26WZPGM4HPUTD4UOURJPVRPJHUZVXAZV5BDY4T3E
 VITE_ESCROW_CONTRACT_ID=CCB3RAQZJV7Y4B4M7PR2CIG6HR5Y4DCLKM6QY3EOTRB6ULIYV37PIB6H
 ```
-
-Production URLs:
-
-| Service | URL |
-| --- | --- |
-| Frontend | Add Vercel URL after deployment |
-| Backend | Add Render URL after deployment |
 
 ## CI/CD
 
@@ -255,11 +267,7 @@ The CI pipeline runs:
 - escrow contract tests
 - job manager contract tests
 
-After pushing to GitHub, use the successful Actions run as CI/CD proof. You can also add the generated GitHub Actions badge from:
-
-```text
-https://github.com/<OWNER>/<REPO>/actions/workflows/ci.yml
-```
+CI/CD proof is available through the README badge and the [GitHub Actions workflow page](https://github.com/Madhav0Seth/SkillX/actions/workflows/ci.yml).
 
 ## Backend API
 
@@ -273,6 +281,9 @@ https://github.com/<OWNER>/<REPO>/actions/workflows/ci.yml
 
 ## Verification
 
+- [x] Live demo deployed on Vercel.
+- [x] Backend API deployed on Render.
+- [x] Demo video included.
 - [x] README includes setup instructions.
 - [x] README includes deployed contract addresses.
 - [x] README includes Stellar Expert contract links.
