@@ -38,8 +38,28 @@ function getFirstSubmittableMilestoneId(milestones) {
   return milestone ? String(milestone.milestone_id) : "";
 }
 
+function hasRole(profile, role) {
+  return profile?.role === role || profile?.role === "both";
+}
+
+function normalizeWallet(value) {
+  return value?.trim().toUpperCase() || "";
+}
+
+function getAcceptContractMessage(error) {
+  const message = error?.message || "Unknown contract error";
+  if (
+    message.includes("InvalidAction") ||
+    message.includes("UnreachableCodeReached")
+  ) {
+    return "On-chain accept failed. Make sure this job was created on-chain, is still open on-chain, and you are accepting with the freelancer wallet.";
+  }
+  return message;
+}
+
 export default function FreelancerDashboard() {
   const { address } = useWallet();
+  const walletAddress = normalizeWallet(address);
   const [jobId, setJobId] = useState("");
   const [job, setJob] = useState(null);
   const [assignedJobs, setAssignedJobs] = useState([]);
@@ -52,18 +72,21 @@ export default function FreelancerDashboard() {
 
   const loadMyJobs = async () => {
     setStatus("");
-    if (!address) {
+    if (!walletAddress) {
       setStatus("Connect wallet first.");
       return;
     }
     try {
       const result = await api.getJobs({
-        freelancer_wallet: address,
+        freelancer_wallet: walletAddress,
         scope: "assigned",
         limit: 20
       });
-      const myJobs = (result.jobs || []).filter((item) => item.client_wallet !== address);
+      const myJobs = result.jobs || [];
       setAssignedJobs(myJobs);
+      if (myJobs.length && !job) {
+        await selectJob(myJobs[0], { keepStatus: true });
+      }
       if (!myJobs.length) {
         setStatus("No jobs are assigned to your wallet yet.");
       }
@@ -76,12 +99,14 @@ export default function FreelancerDashboard() {
     setStatus("");
     try {
       const result = await api.getJobs({
-        freelancer_wallet: address || undefined,
+        freelancer_wallet: walletAddress || undefined,
         scope: "open",
         limit: 30
       });
       const availableJobs = (result.jobs || []).filter(
-        (item) => item.client_wallet !== address && !rejectedJobIds.includes(item.job_id)
+        (item) =>
+          normalizeWallet(item.client_wallet) !== walletAddress &&
+          !rejectedJobIds.includes(item.job_id)
       );
       setOpenJobs(availableJobs);
       if (!availableJobs.length) {
@@ -128,29 +153,35 @@ export default function FreelancerDashboard() {
 
   const acceptJob = async (selectedJob) => {
     try {
-      if (!address) {
+      if (!walletAddress) {
         setStatus("Connect wallet first.");
         return;
       }
+      let profile;
       try {
-        await api.getProfile(address);
+        const result = await api.getProfile(walletAddress);
+        profile = result.profile;
       } catch (_error) {
         setStatus("Please register on the Role page before accepting jobs.");
         return;
       }
+      if (!hasRole(profile, "freelancer")) {
+        setStatus("Add a Freelancer identity on the Role page before accepting jobs.");
+        return;
+      }
 
-      if (selectedJob.client_wallet === address) {
+      if (normalizeWallet(selectedJob.client_wallet) === walletAddress) {
         setStatus("You cannot accept your own job. Use a different freelancer wallet.");
         return;
       }
-      const acceptedResult = await api.acceptJob(selectedJob.job_id, address);
-      let acceptedStatus = `Accepted job ${selectedJob.job_id}.`;
       try {
-        await contracts.acceptJobOnChain(selectedJob.job_hash, address);
+        await contracts.acceptJobOnChain(selectedJob.job_hash, walletAddress);
       } catch (contractError) {
-        acceptedStatus =
-          `Accepted job ${selectedJob.job_id} in database. On-chain accept skipped: ${contractError.message}`;
+        setStatus(getAcceptContractMessage(contractError));
+        return;
       }
+      const acceptedResult = await api.acceptJob(selectedJob.job_id, walletAddress);
+      const acceptedStatus = `Accepted job ${selectedJob.job_id}.`;
       setStatus(acceptedStatus);
       await selectJob(acceptedResult.job, { keepStatus: true });
       setOpenJobs((prev) => prev.filter((item) => item.job_id !== selectedJob.job_id));
@@ -170,11 +201,11 @@ export default function FreelancerDashboard() {
 
   const rejectJob = async (selectedJob) => {
     try {
-      if (!address) {
+      if (!walletAddress) {
         setStatus("Connect wallet first.");
         return;
       }
-      await api.rejectJob(selectedJob.job_id, address);
+      await api.rejectJob(selectedJob.job_id, walletAddress);
       setStatus(`Rejected job ${selectedJob.job_id}.`);
       setRejectedJobIds((prev) => [...prev, selectedJob.job_id]);
       setOpenJobs((prev) => prev.filter((item) => item.job_id !== selectedJob.job_id));
@@ -192,7 +223,7 @@ export default function FreelancerDashboard() {
   const submitMilestone = async (e) => {
     e.preventDefault();
     setStatus("");
-    if (!address) {
+    if (!walletAddress) {
       setStatus("Connect wallet first.");
       return;
     }
@@ -201,7 +232,7 @@ export default function FreelancerDashboard() {
         setStatus("Load and select a job before submitting a milestone.");
         return;
       }
-      if (job.freelancer_wallet !== address) {
+      if (normalizeWallet(job.freelancer_wallet) !== walletAddress) {
         setStatus("Only the assigned freelancer can submit milestones for this job.");
         return;
       }
@@ -256,121 +287,129 @@ export default function FreelancerDashboard() {
         </div>
       </div>
 
-      <div className="dashboard-section">
-        <div className="section-heading">
-          <h3>Assigned to Me</h3>
-          <span>{assignedJobs.length} jobs</span>
+      <div className="freelancer-workspace">
+        <div className="job-list-pane">
+          <div className="dashboard-section">
+            <div className="section-heading">
+              <h3>Assigned to Me</h3>
+              <span>{assignedJobs.length} jobs</span>
+            </div>
+            {assignedJobs.length > 0 ? (
+              <div className="stacked-list">
+                {assignedJobs.map((item) => (
+                  <JobCard
+                    key={item.job_id}
+                    job={item}
+                    onSelect={selectJob}
+                    isSelected={job?.job_id === item.job_id}
+                    onReject={rejectJob}
+                    variant="assigned"
+                  />
+                ))}
+              </div>
+            ) : (
+              <p className="empty-state">Use View My Jobs to load jobs assigned to your wallet.</p>
+            )}
+          </div>
+
+          <div className="dashboard-section">
+            <div className="section-heading">
+              <h3>Open Jobs</h3>
+              <span>{openJobs.length} jobs</span>
+            </div>
+            {openJobs.length > 0 ? (
+              <div className="stacked-list">
+                {openJobs.map((item) => (
+                  <JobCard
+                    key={item.job_id}
+                    job={item}
+                    onSelect={selectJob}
+                    isSelected={job?.job_id === item.job_id}
+                    onAccept={acceptJob}
+                    onReject={rejectJob}
+                    variant="open"
+                  />
+                ))}
+              </div>
+            ) : (
+              <p className="empty-state">Use View Open Jobs to browse jobs without an assigned freelancer.</p>
+            )}
+          </div>
         </div>
-        {assignedJobs.length > 0 ? (
-          <div className="grid-cards">
-            {assignedJobs.map((item) => (
+
+        <aside className="job-detail-pane">
+          {job ? (
+            <>
+              <div className="section-heading">
+                <h3>Selected Job</h3>
+                <span>Job #{job.job_id}</span>
+              </div>
               <JobCard
-                key={item.job_id}
-                job={item}
-                onSelect={selectJob}
-                isSelected={job?.job_id === item.job_id}
+                job={job}
+                onAccept={job.freelancer_wallet ? undefined : acceptJob}
                 onReject={rejectJob}
-                variant="assigned"
+                isSelected
               />
-            ))}
-          </div>
-        ) : (
-          <p className="empty-state">Use View My Jobs to load jobs assigned to your wallet.</p>
-        )}
-      </div>
 
-      <div className="dashboard-section">
-        <div className="section-heading">
-          <h3>Open Jobs</h3>
-          <span>{openJobs.length} jobs</span>
-        </div>
-        {openJobs.length > 0 ? (
-          <div className="grid-cards">
-            {openJobs.map((item) => (
-              <JobCard
-                key={item.job_id}
-                job={item}
-                onSelect={selectJob}
-                isSelected={job?.job_id === item.job_id}
-                onAccept={acceptJob}
-                onReject={rejectJob}
-                variant="open"
-              />
-            ))}
-          </div>
-        ) : (
-          <p className="empty-state">Use View Open Jobs to browse jobs without an assigned freelancer.</p>
-        )}
-      </div>
+              {milestones.length > 0 && (
+                <div className="card compact-card">
+                  <h3>Milestones</h3>
+                  {milestones.map((m, idx) => (
+                    <small key={m.milestone_id}>
+                      #{idx} - Milestone ID {m.milestone_id}: {m.name} ({m.status})
+                      {canSubmitMilestone(milestones, idx) ? " - ready to submit" : ""}
+                    </small>
+                  ))}
+                </div>
+              )}
 
-      {job && (
-        <div className="dashboard-section">
-          <div className="section-heading">
-            <h3>Selected Job</h3>
-            <span>Job #{job.job_id}</span>
-          </div>
-          <JobCard
-            job={job}
-            onAccept={job.freelancer_wallet ? undefined : acceptJob}
-            onReject={rejectJob}
-            isSelected
-          />
-        </div>
-      )}
-
-      {milestones.length > 0 && (
-        <div className="card">
-          <h3>Milestones for loaded job</h3>
-          {milestones.map((m, idx) => (
-            <small key={m.milestone_id}>
-              #{idx} - Milestone ID {m.milestone_id}: {m.name} ({m.status})
-              {canSubmitMilestone(milestones, idx) ? " - ready to submit" : ""}
-            </small>
-          ))}
-        </div>
-      )}
-
-      {job && job.freelancer_wallet === address && (
-        <form className="grid-form" onSubmit={submitMilestone}>
-          <h3>Submit Completed Milestone</h3>
-          <label>
-            Completed milestone
-            <select
-              value={milestoneId}
-              onChange={(e) => setMilestoneId(e.target.value)}
-              required
-            >
-              <option value="">Select milestone</option>
-              {milestones.map((m, idx) => (
-                <option
-                  key={m.milestone_id}
-                  value={m.milestone_id}
-                  disabled={!canSubmitMilestone(milestones, idx)}
-                >
-                  #{idx} - {m.name} ({m.status})
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Submission URL
-            <input
-              value={fileUrl}
-              onChange={(e) => setFileUrl(e.target.value)}
-              placeholder="https://files.example/submission.zip"
-              required
-            />
-          </label>
-          <button type="submit" disabled={!milestoneId}>
-            Submit Milestone
-          </button>
-          {!milestoneId && (
-            <p className="empty-state">
-              No milestone is ready to submit yet. Submit milestone 0 first, then wait for approval before continuing.
-            </p>
+              {normalizeWallet(job.freelancer_wallet) === walletAddress && (
+                <form className="grid-form compact-form" onSubmit={submitMilestone}>
+                  <h3>Submit Completed Milestone</h3>
+                  <label>
+                    Completed milestone
+                    <select
+                      value={milestoneId}
+                      onChange={(e) => setMilestoneId(e.target.value)}
+                      required
+                    >
+                      <option value="">Select milestone</option>
+                      {milestones.map((m, idx) => (
+                        <option
+                          key={m.milestone_id}
+                          value={m.milestone_id}
+                          disabled={!canSubmitMilestone(milestones, idx)}
+                        >
+                          #{idx} - {m.name} ({m.status})
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    Submission URL
+                    <input
+                      value={fileUrl}
+                      onChange={(e) => setFileUrl(e.target.value)}
+                      placeholder="https://files.example/submission.zip"
+                      required
+                    />
+                  </label>
+                  <button type="submit" disabled={!milestoneId}>
+                    Submit Milestone
+                  </button>
+                  {!milestoneId && (
+                    <p className="empty-state">
+                      No milestone is ready to submit yet. Submit milestone 0 first, then wait for approval before continuing.
+                    </p>
+                  )}
+                </form>
+              )}
+            </>
+          ) : (
+            <p className="empty-state">Select one of your assigned jobs to submit milestones here.</p>
           )}
-        </form>
-      )}
+        </aside>
+      </div>
       {status && <p className="status">{status}</p>}
     </section>
   );

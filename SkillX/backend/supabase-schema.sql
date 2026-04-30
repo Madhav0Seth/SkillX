@@ -1,11 +1,16 @@
 create table if not exists users (
   wallet_address text primary key,
-  role text not null check (role in ('client', 'freelancer')),
+  role text not null check (role in ('client', 'freelancer', 'both')),
   skills text[] not null default '{}',
   bio text not null default '',
   portfolio text not null default '',
   created_at timestamptz not null default now()
 );
+
+alter table users drop constraint if exists users_role_check;
+alter table users
+  add constraint users_role_check
+  check (role in ('client', 'freelancer', 'both'));
 
 create table if not exists jobs (
   job_id bigint generated always as identity primary key,

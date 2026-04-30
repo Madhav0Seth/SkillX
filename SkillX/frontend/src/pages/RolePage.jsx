@@ -2,6 +2,10 @@ import { useState } from "react";
 import { useWallet } from "../context/WalletContext";
 import { api } from "../services/api";
 
+function normalizeWallet(value) {
+  return value?.trim().toUpperCase() || "";
+}
+
 export default function RolePage() {
   const { address } = useWallet();
   const [role, setRole] = useState("client");
@@ -19,7 +23,7 @@ export default function RolePage() {
     }
     try {
       await api.createProfile({
-        wallet_address: address,
+        wallet_address: normalizeWallet(address),
         role,
         skills: skills
           .split(",")
@@ -43,6 +47,7 @@ export default function RolePage() {
           <select value={role} onChange={(e) => setRole(e.target.value)}>
             <option value="client">Client</option>
             <option value="freelancer">Freelancer</option>
+            <option value="both">Both Client and Freelancer</option>
           </select>
         </label>
         <label>

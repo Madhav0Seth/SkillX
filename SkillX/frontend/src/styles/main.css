@@ -260,6 +260,40 @@ body {
   margin-top: 1.5rem;
 }
 
+.freelancer-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 430px);
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.job-list-pane,
+.job-detail-pane,
+.stacked-list {
+  display: grid;
+  gap: 1rem;
+}
+
+.job-detail-pane {
+  position: sticky;
+  top: 96px;
+  max-height: calc(100vh - 120px);
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+  background: color-mix(in srgb, var(--surface) 88%, var(--bg));
+}
+
+.compact-card,
+.compact-form {
+  padding: 1rem;
+}
+
+.compact-form {
+  gap: 1rem;
+}
+
 .section-heading span {
   color: var(--muted);
   font-size: 0.85rem;
@@ -575,6 +609,15 @@ small {
 
   .milestone-row {
     grid-template-columns: 1fr;
+  }
+
+  .freelancer-workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .job-detail-pane {
+    position: static;
+    max-height: none;
   }
 
   .hero h1 {

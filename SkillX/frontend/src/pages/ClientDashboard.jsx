@@ -21,6 +21,14 @@ function distributePercentages(count) {
   );
 }
 
+function hasRole(profile, role) {
+  return profile?.role === role || profile?.role === "both";
+}
+
+function normalizeWallet(value) {
+  return value.trim().toUpperCase();
+}
+
 async function sha256Hex(input) {
   const data = new TextEncoder().encode(input);
   const hashBuffer = await crypto.subtle.digest("SHA-256", data);
@@ -93,17 +101,22 @@ export default function ClientDashboard() {
       return;
     }
     try {
+      let profile;
       try {
-        await api.getProfile(address);
+        const result = await api.getProfile(address);
+        profile = result.profile;
       } catch (_error) {
         setStatus("Please register on the Role page before creating jobs.");
         return;
       }
-
-      if (freelancerWallet && freelancerWallet === address) {
-        setStatus("Client and freelancer cannot be the same wallet.");
+      if (!hasRole(profile, "client")) {
+        setStatus("Add a Client identity on the Role page before creating jobs.");
         return;
       }
+
+      const normalizedFreelancerWallet = freelancerWallet
+        ? normalizeWallet(freelancerWallet)
+        : "";
 
       const parsedMilestones = milestones.map((m) => ({
         ...m,
@@ -136,8 +149,8 @@ export default function ClientDashboard() {
       }
 
       const payload = {
-        client_wallet: address,
-        freelancer_wallet: freelancerWallet || null,
+        client_wallet: normalizeWallet(address),
+        freelancer_wallet: normalizedFreelancerWallet || null,
         title,
         description,
         milestones

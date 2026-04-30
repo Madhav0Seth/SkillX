@@ -3,8 +3,13 @@ import { useWallet } from "../context/WalletContext";
 import JobCard from "../components/JobCard";
 import { api } from "../services/api";
 
+function normalizeWallet(value) {
+  return value?.trim().toUpperCase() || "";
+}
+
 export default function ProfilePage() {
   const { address } = useWallet();
+  const walletAddress = normalizeWallet(address);
   const [profile, setProfile] = useState(null);
   const [clientJobs, setClientJobs] = useState([]);
   const [freelancerJobs, setFreelancerJobs] = useState([]);
@@ -17,7 +22,7 @@ export default function ProfilePage() {
       setClientJobs([]);
       setFreelancerJobs([]);
 
-      if (!address) {
+      if (!walletAddress) {
         setStatus("Connect wallet to view your profile.");
         return;
       }
@@ -25,10 +30,10 @@ export default function ProfilePage() {
       try {
         const [profileResult, clientJobsResult, freelancerJobsResult] =
           await Promise.all([
-            api.getProfile(address),
-            api.getJobs({ client_wallet: address, limit: 20 }),
+            api.getProfile(walletAddress),
+            api.getJobs({ client_wallet: walletAddress, limit: 20 }),
             api.getJobs({
-              freelancer_wallet: address,
+              freelancer_wallet: walletAddress,
               scope: "assigned",
               limit: 20
             })
@@ -43,7 +48,7 @@ export default function ProfilePage() {
     };
 
     loadProfileData();
-  }, [address]);
+  }, [walletAddress]);
 
   const skills = profile?.skills || [];
 

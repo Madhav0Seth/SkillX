@@ -5,31 +5,41 @@ const { badRequest, internalError } = require("../utils/http");
 
 const router = express.Router();
 
+function hasRole(profile, role) {
+  return profile?.role === role || profile?.role === "both";
+}
+
+function normalizeWallet(value) {
+  return typeof value === "string" ? value.trim().toUpperCase() : value;
+}
+
 router.get("/jobs", async (req, res) => {
   try {
     const { freelancer_wallet, client_wallet, limit, scope } = req.query;
+    const freelancerWallet = normalizeWallet(freelancer_wallet);
+    const clientWallet = normalizeWallet(client_wallet);
 
     let query = supabase
       .from("jobs")
       .select("*")
       .order("job_id", { ascending: false });
 
-    if (freelancer_wallet) {
+    if (freelancerWallet) {
       if (scope === "assigned") {
-        query = query.eq("freelancer_wallet", freelancer_wallet);
+        query = query.ilike("freelancer_wallet", freelancerWallet);
       } else if (scope === "open") {
         query = query.is("freelancer_wallet", null);
       } else {
         query = query.or(
-          `freelancer_wallet.eq.${freelancer_wallet},freelancer_wallet.is.null`
+          `freelancer_wallet.ilike.${freelancerWallet},freelancer_wallet.is.null`
         );
       }
     } else if (scope === "open") {
       query = query.is("freelancer_wallet", null);
     }
 
-    if (client_wallet) {
-      query = query.eq("client_wallet", client_wallet);
+    if (clientWallet) {
+      query = query.ilike("client_wallet", clientWallet);
     }
 
     if (limit) {
@@ -51,8 +61,10 @@ router.post("/job", async (req, res) => {
   try {
     const { client_wallet, freelancer_wallet, title, description, milestones } =
       req.body;
+    const clientWallet = normalizeWallet(client_wallet);
+    const freelancerWallet = normalizeWallet(freelancer_wallet);
 
-    if (!client_wallet || !title || !description) {
+    if (!clientWallet || !title || !description) {
       return badRequest(
         res,
         "client_wallet, title, and description are required"
@@ -62,36 +74,36 @@ router.post("/job", async (req, res) => {
     // 1. Verify client has a profile
     const { data: clientProfile, error: clientProfileError } = await supabase
       .from("users")
-      .select("wallet_address")
-      .eq("wallet_address", client_wallet)
+      .select("wallet_address, role")
+      .ilike("wallet_address", clientWallet)
       .single();
 
-    if (clientProfileError || !clientProfile) {
+    if (clientProfileError || !hasRole(clientProfile, "client")) {
       return res.status(403).json({
-        error: "Client profile not found. Please create a profile first.",
+        error: "Client identity not found. Register as Client or Both before creating jobs.",
       });
     }
 
     // 2. Verify freelancer profile if wallet provided
-    if (freelancer_wallet) {
+    if (freelancerWallet) {
       const { data: freelancerProfile, error: freelancerProfileError } =
         await supabase
           .from("users")
-          .select("wallet_address")
-          .eq("wallet_address", freelancer_wallet)
+          .select("wallet_address, role")
+          .ilike("wallet_address", freelancerWallet)
           .single();
 
-      if (freelancerProfileError || !freelancerProfile) {
+      if (freelancerProfileError || !hasRole(freelancerProfile, "freelancer")) {
         return res.status(400).json({
-          error: "Selected freelancer profile not found in our system.",
+          error: "Selected wallet is not registered as a freelancer.",
         });
       }
     }
 
     const jobHash = sha256(
       JSON.stringify({
-        client_wallet,
-        freelancer_wallet: freelancer_wallet || null,
+        client_wallet: clientWallet,
+        freelancer_wallet: freelancerWallet || null,
         title,
         description,
       })
@@ -100,8 +112,8 @@ router.post("/job", async (req, res) => {
     const { data: job, error: jobError } = await supabase
       .from("jobs")
       .insert({
-        client_wallet,
-        freelancer_wallet: freelancer_wallet || null,
+        client_wallet: clientWallet,
+        freelancer_wallet: freelancerWallet || null,
         title,
         description,
         job_hash: jobHash,
@@ -148,7 +160,8 @@ router.post("/job/:jobId/accept", async (req, res) => {
   try {
     const { jobId } = req.params;
     const { freelancer_wallet } = req.body;
-    if (!jobId || !freelancer_wallet) {
+    const freelancerWallet = normalizeWallet(freelancer_wallet);
+    if (!jobId || !freelancerWallet) {
       return badRequest(res, "jobId and freelancer_wallet are required");
     }
 
@@ -162,26 +175,29 @@ router.post("/job/:jobId/accept", async (req, res) => {
       throw jobError;
     }
 
-    if (job.freelancer_wallet && job.freelancer_wallet !== freelancer_wallet) {
+    if (
+      job.freelancer_wallet &&
+      normalizeWallet(job.freelancer_wallet) !== freelancerWallet
+    ) {
       return res.status(409).json({ error: "Job already accepted by another freelancer" });
     }
 
     const { data: freelancerProfile, error: freelancerProfileError } =
       await supabase
         .from("users")
-        .select("wallet_address")
-        .eq("wallet_address", freelancer_wallet)
+        .select("wallet_address, role")
+        .ilike("wallet_address", freelancerWallet)
         .single();
 
-    if (freelancerProfileError || !freelancerProfile) {
+    if (freelancerProfileError || !hasRole(freelancerProfile, "freelancer")) {
       return res.status(403).json({
-        error: "Freelancer profile not found. Please register before accepting jobs.",
+        error: "Freelancer identity not found. Register as Freelancer or Both before accepting jobs.",
       });
     }
 
     const { data, error } = await supabase
       .from("jobs")
-      .update({ freelancer_wallet })
+      .update({ freelancer_wallet: freelancerWallet })
       .eq("job_id", Number(jobId))
       .select()
       .single();
@@ -200,7 +216,8 @@ router.post("/job/:jobId/reject", async (req, res) => {
   try {
     const { jobId } = req.params;
     const { freelancer_wallet } = req.body;
-    if (!jobId || !freelancer_wallet) {
+    const freelancerWallet = normalizeWallet(freelancer_wallet);
+    if (!jobId || !freelancerWallet) {
       return badRequest(res, "jobId and freelancer_wallet are required");
     }
 
@@ -214,7 +231,10 @@ router.post("/job/:jobId/reject", async (req, res) => {
       throw jobError;
     }
 
-    if (job.freelancer_wallet && job.freelancer_wallet !== freelancer_wallet) {
+    if (
+      job.freelancer_wallet &&
+      normalizeWallet(job.freelancer_wallet) !== freelancerWallet
+    ) {
       return res
         .status(409)
         .json({ error: "Cannot reject a job accepted by another freelancer" });

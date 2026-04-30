@@ -3,17 +3,26 @@ const { supabase } = require("../config/supabase");
 const { badRequest, internalError } = require("../utils/http");
 
 const router = express.Router();
+const VALID_ROLES = new Set(["client", "freelancer", "both"]);
+
+function normalizeWallet(value) {
+  return typeof value === "string" ? value.trim().toUpperCase() : value;
+}
 
 router.post("/profile", async (req, res) => {
   try {
     const { wallet_address, role, skills, bio, portfolio } = req.body;
+    const walletAddress = normalizeWallet(wallet_address);
 
-    if (!wallet_address || !role) {
+    if (!walletAddress || !role) {
       return badRequest(res, "wallet_address and role are required");
+    }
+    if (!VALID_ROLES.has(role)) {
+      return badRequest(res, "role must be client, freelancer, or both");
     }
 
     const payload = {
-      wallet_address,
+      wallet_address: walletAddress,
       role,
       skills: skills || [],
       bio: bio || "",
@@ -39,15 +48,16 @@ router.post("/profile", async (req, res) => {
 router.get("/profile/:walletAddress", async (req, res) => {
   try {
     const { walletAddress } = req.params;
+    const normalizedWalletAddress = normalizeWallet(walletAddress);
 
-    if (!walletAddress) {
+    if (!normalizedWalletAddress) {
       return badRequest(res, "walletAddress is required");
     }
 
     const { data, error } = await supabase
       .from("users")
       .select("wallet_address, role, skills, bio, portfolio")
-      .eq("wallet_address", walletAddress)
+      .ilike("wallet_address", normalizedWalletAddress)
       .single();
 
     if (error) {
@@ -72,7 +82,7 @@ router.get("/freelancers", async (req, res) => {
     let query = supabase
       .from("users")
       .select("wallet_address, role, skills, bio, portfolio")
-      .eq("role", "freelancer");
+      .in("role", ["freelancer", "both"]);
 
     if (category) {
       query = query.contains("skills", [category]);
