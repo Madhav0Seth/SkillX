@@ -5,6 +5,7 @@ import {
   setAllowed,
   getAddress
 } from "@stellar/freighter-api";
+import { Horizon } from "@stellar/stellar-sdk";
 
 const WalletContext = createContext(null);
 
@@ -16,6 +17,7 @@ function normalizeFreighterAddress(result) {
 
 export function WalletProvider({ children }) {
   const [address, setAddress] = useState("");
+  const [balance, setBalance] = useState("0");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -43,6 +45,7 @@ export function WalletProvider({ children }) {
         throw new Error("Freighter did not return a wallet address");
       }
       setAddress(walletAddress);
+      await fetchBalance(walletAddress);
     } catch (err) {
       setError(err.message || "Failed to connect wallet");
     } finally {
@@ -50,20 +53,36 @@ export function WalletProvider({ children }) {
     }
   };
 
+  const fetchBalance = async (userAddress) => {
+    const target = userAddress || address;
+    if (!target) return;
+    try {
+      const server = new Horizon.Server("https://horizon-testnet.stellar.org");
+      const account = await server.loadAccount(target);
+      const native = account.balances.find((b) => b.asset_type === "native");
+      setBalance(native ? parseFloat(native.balance).toLocaleString() : "0");
+    } catch (err) {
+      console.error("Failed to fetch balance:", err);
+    }
+  };
+
   const disconnectWallet = () => {
     setAddress("");
+    setBalance("0");
   };
 
   const value = useMemo(
     () => ({
       address,
+      balance,
       loading,
       error,
       connectWallet,
       disconnectWallet,
+      fetchBalance,
       isConnected: Boolean(address)
     }),
-    [address, loading, error]
+    [address, balance, loading, error]
   );
 
   return (

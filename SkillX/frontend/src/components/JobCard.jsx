@@ -9,17 +9,21 @@ export default function JobCard({
   onReject,
   onSelect,
   isSelected,
-  variant = "default"
+  variant = "default",
+  statusLabel,
+  statusTone = "default",
+  paymentAmount
 }) {
   const isAssigned = Boolean(job.freelancer_wallet);
-  const statusLabel = isAssigned ? "Assigned" : "Open";
+  const label = statusLabel || (isAssigned ? "Assigned" : "Open");
+  const tone = statusTone === "default" ? (isAssigned ? "assigned" : "open") : statusTone;
 
   return (
     <article className={`card job-card job-card-${variant} ${isSelected ? "card-selected" : ""}`}>
       <div className="job-card-header">
         <h3>{job.title}</h3>
-        <span className={`status-pill ${isAssigned ? "status-pill-assigned" : "status-pill-open"}`}>
-          {statusLabel}
+        <span className={`status-pill status-pill-${tone}`}>
+          {label}
         </span>
       </div>
       <p>{job.description}</p>
@@ -27,6 +31,7 @@ export default function JobCard({
         <small>Job ID: {job.job_id}</small>
         <small>Client: {shortAddress(job.client_wallet)}</small>
         <small>Freelancer: {shortAddress(job.freelancer_wallet)}</small>
+        {paymentAmount != null && <small>Received: {paymentAmount}</small>}
         <small>Created: {job.created_at ? new Date(job.created_at).toLocaleString() : "Unknown"}</small>
       </div>
       {(onAccept || onSelect) && (

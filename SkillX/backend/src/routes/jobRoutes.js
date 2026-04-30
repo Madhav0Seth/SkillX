@@ -95,7 +95,7 @@ router.post("/job", async (req, res) => {
 
       if (freelancerProfileError || !hasRole(freelancerProfile, "freelancer")) {
         return res.status(400).json({
-          error: "Selected wallet is not registered as a freelancer.",
+          error: `Selected wallet is not registered as a freelancer: ${freelancerWallet}`,
         });
       }
     }
@@ -252,6 +252,67 @@ router.post("/job/:jobId/reject", async (req, res) => {
     }
 
     return res.json({ job: data });
+  } catch (error) {
+    return internalError(res, error);
+  }
+});
+
+router.post("/milestone/:milestoneId/approve", async (req, res) => {
+  try {
+    const { milestoneId } = req.params;
+    const { client_wallet } = req.body;
+    const clientWallet = normalizeWallet(client_wallet);
+
+    if (!milestoneId || !clientWallet) {
+      return badRequest(res, "milestoneId and client_wallet are required");
+    }
+
+    const { data: milestone, error: milestoneError } = await supabase
+      .from("milestones")
+      .select("milestone_id, job_id, status")
+      .eq("milestone_id", Number(milestoneId))
+      .single();
+
+    if (milestoneError) {
+      throw milestoneError;
+    }
+
+    if (milestone.status === "approved") {
+      return res.json({ milestone });
+    }
+
+    if (milestone.status !== "submitted") {
+      return badRequest(res, `Milestone must be submitted before approval. Current status: ${milestone.status}`);
+    }
+
+    const { data: job, error: jobError } = await supabase
+      .from("jobs")
+      .select("job_id, client_wallet")
+      .eq("job_id", milestone.job_id)
+      .single();
+
+    if (jobError) {
+      throw jobError;
+    }
+
+    if (normalizeWallet(job.client_wallet) !== clientWallet) {
+      return res.status(403).json({
+        error: "Only the job client can approve this milestone.",
+      });
+    }
+
+    const { data, error } = await supabase
+      .from("milestones")
+      .update({ status: "approved" })
+      .eq("milestone_id", Number(milestoneId))
+      .select()
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    return res.json({ milestone: data });
   } catch (error) {
     return internalError(res, error);
   }

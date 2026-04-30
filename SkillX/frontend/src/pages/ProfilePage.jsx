@@ -3,8 +3,36 @@ import { useWallet } from "../context/WalletContext";
 import JobCard from "../components/JobCard";
 import { api } from "../services/api";
 
+const HORIZON_TESTNET_URL = "https://horizon-testnet.stellar.org";
+
 function normalizeWallet(value) {
   return value?.trim().toUpperCase() || "";
+}
+
+async function fetchXlmBalance(walletAddress) {
+  const response = await fetch(
+    `${HORIZON_TESTNET_URL}/accounts/${encodeURIComponent(walletAddress)}`
+  );
+  const data = await response.json();
+
+  if (!response.ok) {
+    if (response.status === 404) {
+      throw new Error("Wallet is not funded on Stellar testnet yet.");
+    }
+    throw new Error(data.detail || "Failed to fetch testnet balance.");
+  }
+
+  const nativeBalance = (data.balances || []).find(
+    (balance) => balance.asset_type === "native"
+  );
+  return nativeBalance?.balance || "0";
+}
+
+function formatXlm(value) {
+  return Number(value || 0).toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 7
+  });
 }
 
 export default function ProfilePage() {
@@ -13,7 +41,30 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState(null);
   const [clientJobs, setClientJobs] = useState([]);
   const [freelancerJobs, setFreelancerJobs] = useState([]);
+  const [xlmBalance, setXlmBalance] = useState("");
+  const [balanceStatus, setBalanceStatus] = useState("");
+  const [balanceLoading, setBalanceLoading] = useState(false);
   const [status, setStatus] = useState("");
+
+  const loadBalance = async () => {
+    if (!walletAddress) {
+      setXlmBalance("");
+      setBalanceStatus("Connect wallet to view your XLM balance.");
+      return;
+    }
+
+    try {
+      setBalanceLoading(true);
+      setBalanceStatus("");
+      const balance = await fetchXlmBalance(walletAddress);
+      setXlmBalance(balance);
+    } catch (error) {
+      setXlmBalance("");
+      setBalanceStatus(error.message);
+    } finally {
+      setBalanceLoading(false);
+    }
+  };
 
   useEffect(() => {
     const loadProfileData = async () => {
@@ -21,10 +72,20 @@ export default function ProfilePage() {
       setProfile(null);
       setClientJobs([]);
       setFreelancerJobs([]);
+      setXlmBalance("");
+      setBalanceStatus("");
 
       if (!walletAddress) {
         setStatus("Connect wallet to view your profile.");
+        setBalanceStatus("Connect wallet to view your XLM balance.");
         return;
+      }
+
+      try {
+        const balance = await fetchXlmBalance(walletAddress);
+        setXlmBalance(balance);
+      } catch (error) {
+        setBalanceStatus(error.message);
       }
 
       try {
@@ -55,6 +116,20 @@ export default function ProfilePage() {
   return (
     <section>
       <h2>Profile</h2>
+      <div className="card balance-card">
+        <div className="section-heading">
+          <h3>Testnet XLM Balance</h3>
+          <button className="ghost" onClick={loadBalance} disabled={balanceLoading}>
+            {balanceLoading ? "Refreshing..." : "Refresh"}
+          </button>
+        </div>
+        <strong className="balance-amount">
+          {xlmBalance ? `${formatXlm(xlmBalance)} XLM` : "-- XLM"}
+        </strong>
+        <small>Connected wallet: {address || "Connect wallet"}</small>
+        {balanceStatus && <small className="inline-muted">{balanceStatus}</small>}
+      </div>
+
       <div className="card">
         <p>
           <strong>Wallet Identity:</strong> {address || "Connect wallet"}

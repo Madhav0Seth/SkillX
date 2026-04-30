@@ -65,8 +65,7 @@ impl EscrowContract {
     /// Rules
     /// ─────
     /// • `client` must sign the transaction (Soroban `require_auth`).
-    /// • A given `job_id` can only be deposited **once**.  Re-depositing
-    ///   panics to prevent accidental double-funding.
+    /// • A given `job_id` can be topped up by the original depositor only.
     /// • `amount` must be > 0.
     pub fn deposit(env: Env, job_id: BytesN<32>, client: Address, amount: i128) {
         // 1. Require the client's authorisation.
@@ -77,13 +76,14 @@ impl EscrowContract {
             panic!("amount must be positive");
         }
 
-        // 3. Prevent double-deposit for the same job.
-        if env
-            .storage()
-            .persistent()
-            .has(&DataKey::JobBalance(job_id.clone()))
-        {
-            panic!("job already funded");
+        // 3. If this job was already funded, only the original depositor can
+        // top it up.
+        let balance_key = DataKey::JobBalance(job_id.clone());
+        let client_key = DataKey::JobClient(job_id.clone());
+        if let Some(recorded_client) = env.storage().persistent().get::<_, Address>(&client_key) {
+            if recorded_client != client {
+                panic!("client mismatch");
+            }
         }
 
         // 4. Pull tokens from the client into THIS contract.
@@ -96,12 +96,15 @@ impl EscrowContract {
         token.transfer(&client, &env.current_contract_address(), &amount);
 
         // 5. Record the locked balance and the client address.
+        let current_balance: i128 = env
+            .storage()
+            .persistent()
+            .get(&balance_key)
+            .unwrap_or(0);
         env.storage()
             .persistent()
-            .set(&DataKey::JobBalance(job_id.clone()), &amount);
-        env.storage()
-            .persistent()
-            .set(&DataKey::JobClient(job_id.clone()), &client);
+            .set(&balance_key, &(current_balance + amount));
+        env.storage().persistent().set(&client_key, &client);
     }
 
     // ─────────────────────────────────────────────────────
@@ -301,19 +304,32 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "job already funded")]
-    fn test_double_deposit_panics() {
+    fn test_deposit_can_top_up_same_job() {
         let (env, escrow_id, _, _, client_addr) = setup();
         let escrow = EscrowContractClient::new(&env, &escrow_id);
         let jid = job_id(&env);
 
         escrow.deposit(&jid, &client_addr, &100_0000000i128);
-        escrow.deposit(&jid, &client_addr, &100_0000000i128); // should panic
+        escrow.deposit(&jid, &client_addr, &100_0000000i128);
+
+        assert_eq!(escrow.get_balance(&jid), 200_0000000i128);
+    }
+
+    #[test]
+    #[should_panic(expected = "client mismatch")]
+    fn test_deposit_rejects_different_client_top_up() {
+        let (env, escrow_id, _, _, client_addr) = setup();
+        let escrow = EscrowContractClient::new(&env, &escrow_id);
+        let other_client = Address::generate(&env);
+        let jid = job_id(&env);
+
+        escrow.deposit(&jid, &client_addr, &100_0000000i128);
+        escrow.deposit(&jid, &other_client, &100_0000000i128);
     }
 
     #[test]
     fn test_release_payment() {
-        let (env, escrow_id, token_id, job_manager, client_addr) = setup();
+        let (env, escrow_id, token_id, _job_manager, client_addr) = setup();
         let escrow = EscrowContractClient::new(&env, &escrow_id);
         let token = TokenClient::new(&env, &token_id);
         let freelancer = Address::generate(&env);

@@ -85,5 +85,11 @@ export const api = {
       method: "POST",
       body: JSON.stringify(payload)
     });
+  },
+  approveMilestone(milestoneId, client_wallet) {
+    return request(`/milestone/${milestoneId}/approve`, {
+      method: "POST",
+      body: JSON.stringify({ client_wallet })
+    });
   }
 };

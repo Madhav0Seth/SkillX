@@ -7,7 +7,7 @@ function shortAddress(value) {
 }
 
 export default function Header({ theme, onToggleTheme }) {
-  const { address, isConnected, connectWallet, disconnectWallet, loading } =
+  const { address, balance, isConnected, connectWallet, disconnectWallet, loading } =
     useWallet();
 
   return (
@@ -34,7 +34,10 @@ export default function Header({ theme, onToggleTheme }) {
         </button>
         {isConnected ? (
           <>
-            <span className="wallet-pill">{shortAddress(address)}</span>
+            <div className="wallet-info">
+              <span className="balance-pill">{balance} XLM</span>
+              <span className="wallet-pill">{shortAddress(address)}</span>
+            </div>
             <button onClick={disconnectWallet}>Disconnect</button>
           </>
         ) : (

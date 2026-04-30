@@ -133,6 +133,22 @@ body {
   border: 1px solid var(--border);
 }
 
+.wallet-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.balance-pill {
+  background: color-mix(in srgb, var(--primary) 15%, transparent);
+  color: var(--primary);
+  padding: 0.4rem 0.8rem;
+  border-radius: 9999px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  border: 1px solid color-mix(in srgb, var(--primary) 25%, transparent);
+}
+
 .page-container {
   max-width: 1200px;
   margin: 2rem auto;
@@ -208,6 +224,38 @@ body {
   border-color: var(--primary);
 }
 
+.balance-card {
+  gap: 0.75rem;
+}
+
+.balance-amount {
+  display: block;
+  font-size: 2rem;
+  line-height: 1.1;
+}
+
+.freelancer-card {
+  min-width: 0;
+}
+
+.freelancer-card-header {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.freelancer-card-header h3 {
+  margin: 0;
+}
+
+.wallet-address-text {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
 .job-card {
   gap: 0.85rem;
 }
@@ -252,6 +300,53 @@ body {
 .status-pill-assigned {
   border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
   color: var(--primary);
+}
+
+.status-pill-completed {
+  border-color: color-mix(in srgb, #22c55e 55%, var(--border));
+  color: #22c55e;
+}
+
+.payment-summary {
+  display: grid;
+  gap: 0.5rem;
+  padding: 1rem;
+  border: 1px solid color-mix(in srgb, #22c55e 45%, var(--border));
+  border-radius: 8px;
+  background: color-mix(in srgb, #22c55e 8%, var(--surface));
+}
+
+.payment-summary strong {
+  font-size: 2rem;
+  line-height: 1.1;
+}
+
+.payment-summary small {
+  color: var(--muted);
+}
+
+.payment-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-2);
+}
+
+.payment-row > div {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.payment-row small {
+  color: var(--muted);
+}
+
+.review-milestones-card {
+  scroll-margin-top: 96px;
 }
 
 .dashboard-section {
@@ -413,6 +508,14 @@ button:active,
   display: flex;
   gap: 0.75rem;
   flex-wrap: wrap;
+}
+
+.inline-muted {
+  display: inline-flex;
+  align-items: center;
+  color: var(--muted);
+  font-size: 0.875rem;
+  font-weight: 600;
 }
 
 .milestone-row {
@@ -609,6 +712,11 @@ small {
 
   .milestone-row {
     grid-template-columns: 1fr;
+  }
+
+  .payment-row {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .freelancer-workspace {
