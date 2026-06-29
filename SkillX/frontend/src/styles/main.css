@@ -1,121 +1,179 @@
+/* ==========================================================================
+   SKILLX CRAYON & MATTE PAPER DESIGN SYSTEM
+   ========================================================================== */
+
 :root {
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  --bg: #000000;
-  --bg-elevated: #050505;
-  --surface: #0a0a0a;
-  --surface-2: #111111;
-  --text: #ffffff;
-  --muted: #a1a1aa;
-  --border: #27272a;
-  --primary: #a855f7;
-  --primary-strong: #9333ea;
-  --pill-bg: #18181b;
-  --pill-text: #f4f4f5;
-  --input-bg: #000000;
-  --shadow: 0 0 0 1px var(--border);
-  --radius: 12px;
-  --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  /* Clean Premium Sketchbook (Light Theme) */
+  --bg: #f5f6f8;
+  --bg-elevated: #ebedf0;
+  --surface: #ffffff;
+  --surface-2: #fafbfc;
+  --text: #1a1a1e;
+  /* Charcoal marker */
+  --muted: #656b73;
+  --border: #1a1a1e;
+  --primary: #9b5de5;
+  --primary-strong: #7b3fd3;
+  --pill-bg: #ebedf0;
+  --pill-text: #1a1a1e;
+  --input-bg: #ffffff;
+  --radius: 12px 8px 14px 10px/10px 14px 8px 12px;
+  /* Subtle, premium organic sketchbook corner rounding */
+  --radius-sm: 6px 4px 8px 5px/5px 8px 4px 6px;
+  --transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+
+  /* Felt-tip Pen / Marker Colors (Light Theme) */
+  --crayon-purple: #8f2dcd;
+  --crayon-pink: #d11a84;
+  --crayon-yellow: #e5b800;
+  --crayon-blue: #008cc3;
+  --crayon-green: #00aa7f;
+  --crayon-orange: #d35400;
+  --crayon-red: #c0392b;
+
+  /* Paper Grain Texture (Light Theme) */
+  --paper-grain: radial-gradient(rgba(0, 0, 0, 0.04) 1px, transparent 0),
+    radial-gradient(rgba(0, 0, 0, 0.03) 1px, transparent 0);
 }
 
-[data-theme="light"] {
-  --bg: #ffffff;
-  --bg-elevated: #fafafa;
-  --surface: #ffffff;
-  --surface-2: #f4f4f5;
-  --text: #09090b;
-  --muted: #71717a;
-  --border: #e4e4e7;
-  --primary: #9333ea;
-  --primary-strong: #7e22ce;
-  --pill-bg: #f4f4f5;
-  --pill-text: #09090b;
-  --input-bg: #ffffff;
-  --shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+[data-theme="dark"] {
+  /* Charcoal Black Blackboard (Dark Theme) */
+  --bg: #151619;
+  --bg-elevated: #0f1012;
+  --surface: #1f2125;
+  --surface-2: #27292f;
+  --text: #fdfbf7;
+  /* Chalk white */
+  --muted: #9fa4af;
+  /* Dusty chalk grey */
+  --border: #fdfbf7;
+  /* Clean white chalk line */
+  --primary: #ffb3d9;
+  /* Pink chalk */
+  --primary-strong: #ff9dcf;
+  --pill-bg: #27292f;
+  --pill-text: #fdfbf7;
+  --input-bg: #0f1012;
+
+  /* Pastel Chalk Colors (Dark Theme) */
+  --crayon-purple: #d1b3ff;
+  --crayon-pink: #ffb3d9;
+  --crayon-yellow: #fff176;
+  --crayon-blue: #b3f0ff;
+  --crayon-green: #b3ffd9;
+  --crayon-orange: #ffd1a9;
+  --crayon-red: #ffb3b3;
+
+  /* Chalk Dust & Blackboard Smudges (Dark Theme) */
+  --paper-grain: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 0),
+    radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 0),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.01) 25%, transparent 25%),
+    linear-gradient(225deg, rgba(255, 255, 255, 0.01) 25%, transparent 25%);
 }
 
 * {
   box-sizing: border-box;
-  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
 }
 
 body {
   margin: 0;
-  background: var(--bg);
+  background-color: var(--bg);
+  background-image: var(--paper-grain);
+  background-size: 16px 16px, 16px 16px, 8px 8px, 8px 8px;
+  background-position: 0 0, 8px 8px, 0 0, 0 0;
   color: var(--text);
-  line-height: 1.5;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-size: 1.05rem;
+  line-height: 1.6;
+  letter-spacing: 0.01em;
   -webkit-font-smoothing: antialiased;
 }
 
 .app-shell {
   min-height: 100vh;
+  position: relative;
 }
+
+/* ==========================================================================
+   NAVIGATION / TOPBAR
+   ========================================================================== */
 
 .topbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1rem 2rem;
-  background: color-mix(in srgb, var(--bg) 80%, transparent);
-  border-bottom: 1px solid var(--border);
+  padding: 1.2rem 2rem;
+  background-color: var(--bg-elevated);
+  background-image: var(--paper-grain);
+  background-size: 8px 8px;
+  border-bottom: 3px solid var(--border);
   position: sticky;
   top: 0;
-  backdrop-filter: blur(12px);
   z-index: 50;
 }
 
 .logo {
   text-decoration: none;
-  font-weight: 800;
-  color: var(--text);
-  font-size: 1.5rem;
-  letter-spacing: -0.025em;
-  background: linear-gradient(to right, #d946ef, var(--primary));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  font-family: 'Cabin Sketch', cursive;
+  font-weight: 700;
+  color: var(--crayon-purple);
+  font-size: 2.2rem;
+  transform: rotate(-2deg);
+  display: inline-block;
   transition: var(--transition);
 }
 
 .logo:hover {
-  filter: brightness(1.2);
-  transform: scale(1.05);
-}
-
-.text-gradient {
-  background: linear-gradient(to right, #d946ef, var(--primary));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.badge {
-  display: inline-block;
-  padding: 0.25rem 0.75rem;
-  background: color-mix(in srgb, var(--primary) 10%, transparent);
-  color: var(--primary);
-  border: 1px solid color-mix(in srgb, var(--primary) 20%, transparent);
-  border-radius: 9999px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: 1rem;
+  transform: rotate(3deg) scale(1.1);
+  color: var(--crayon-pink);
 }
 
 .navlinks {
   display: flex;
-  gap: 2rem;
+  gap: 1.5rem;
 }
 
 .navlinks a {
-  color: var(--muted);
+  color: var(--text);
   text-decoration: none;
-  font-size: 0.9375rem;
+  font-size: 1.1rem;
   font-weight: 500;
+  padding: 0.25rem 0.75rem;
+  border-radius: var(--radius-sm);
+  border: 2px solid transparent;
   transition: var(--transition);
 }
 
 .navlinks a:hover {
-  color: var(--text);
+  border-color: var(--border);
+  background: var(--surface);
+  transform: translateY(-2px) rotate(1deg);
 }
+
+/* Alternate active or random colors for navlinks */
+.navlinks a:nth-child(4n+1):hover {
+  border-color: var(--crayon-purple);
+  color: var(--crayon-purple);
+}
+
+.navlinks a:nth-child(4n+2):hover {
+  border-color: var(--crayon-blue);
+  color: var(--crayon-blue);
+}
+
+.navlinks a:nth-child(4n+3):hover {
+  border-color: var(--crayon-orange);
+  color: var(--crayon-orange);
+}
+
+.navlinks a:nth-child(4n+4):hover {
+  border-color: var(--crayon-green);
+  color: var(--crayon-green);
+}
+
+/* ==========================================================================
+   WALLET AND HEADER PILLS
+   ========================================================================== */
 
 .walletbox {
   display: flex;
@@ -124,13 +182,13 @@ body {
 }
 
 .wallet-pill {
-  background: var(--pill-bg);
-  color: var(--pill-text);
-  padding: 0.5rem 1rem;
-  border-radius: 9999px;
-  font-size: 0.875rem;
-  font-weight: 500;
-  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  padding: 0.4rem 1rem;
+  border: 3px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 1rem;
+  font-weight: bold;
 }
 
 .wallet-info {
@@ -140,392 +198,353 @@ body {
 }
 
 .balance-pill {
-  background: color-mix(in srgb, var(--primary) 15%, transparent);
-  color: var(--primary);
-  padding: 0.4rem 0.8rem;
-  border-radius: 9999px;
-  font-size: 0.82rem;
-  font-weight: 700;
-  border: 1px solid color-mix(in srgb, var(--primary) 25%, transparent);
+  background: var(--surface);
+  color: var(--crayon-purple);
+  padding: 0.4rem 1rem;
+  border: 3px solid var(--crayon-purple);
+  border-radius: var(--radius);
+  font-size: 1rem;
+  font-weight: bold;
 }
 
+.balance-pill:nth-of-type(2) {
+  border-color: var(--crayon-blue);
+  color: var(--crayon-blue);
+}
+
+/* ==========================================================================
+   LAYOUT
+   ========================================================================== */
+
 .page-container {
-  max-width: 1200px;
+  max-width: 1100px;
   margin: 2rem auto;
   padding: 0 1.5rem 4rem;
-  animation: fadeIn 0.5s ease-out;
+  animation: fadeIn 0.4s ease-out;
 }
 
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(12px) rotate(0.5deg);
   }
 
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) rotate(0deg);
   }
 }
 
+/* ==========================================================================
+   HERO SECTION
+   ========================================================================== */
+
 .hero {
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 3rem;
-  margin-bottom: 2rem;
+  border: 3px solid var(--border);
+  border-radius: 180px 15px 165px 20px/20px 165px 25px 180px;
+  /* Highly organic */
+  padding: 3rem 2.5rem;
+  margin-bottom: 2.5rem;
   position: relative;
   overflow: hidden;
+  box-shadow: 6px 6px 0px var(--border);
+  transform: rotate(-0.5deg);
 }
 
-.hero::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 600px;
-  height: 600px;
-  background: radial-gradient(circle, var(--primary) 0%, transparent 70%);
-  opacity: 0.05;
-  pointer-events: none;
+.hero-content {
+  position: relative;
+  z-index: 2;
 }
 
 .hero h1 {
-  margin: 0 0 1rem;
+  margin: 0 0 1.2rem;
   font-size: 3rem;
   font-weight: 800;
-  letter-spacing: -0.05em;
+  line-height: 1.1;
+  color: var(--text);
 }
+
+.hero p {
+  font-size: 1.4rem;
+  max-width: 600px;
+  margin-bottom: 1.8rem;
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.2rem 1rem;
+  background: var(--surface);
+  color: var(--crayon-orange);
+  border: 3px solid var(--crayon-orange);
+  border-radius: var(--radius);
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 1.2rem;
+  transform: rotate(-1.5deg);
+}
+
+.text-gradient {
+  color: var(--crayon-purple);
+  text-decoration: underline wavy var(--crayon-pink);
+  background: none;
+  -webkit-text-fill-color: initial;
+  font-weight: 800;
+}
+
+/* ==========================================================================
+   CARDS & GRIDS
+   ========================================================================== */
 
 .grid-cards {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(310px, 1fr));
+  gap: 2rem;
 }
 
 .card {
   background: var(--surface);
-  border: 1px solid var(--border);
+  border: 3px solid var(--border);
   border-radius: var(--radius);
-  padding: 1.5rem;
+  padding: 1.8rem;
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 1.2rem;
+  position: relative;
+  box-shadow: 5px 5px 0px var(--border);
   transition: var(--transition);
 }
 
+/* Tilt cards randomly based on position to look cool & organic */
+.grid-cards>.card:nth-child(3n+1) {
+  transform: rotate(-1deg);
+}
+
+.grid-cards>.card:nth-child(3n+2) {
+  transform: rotate(1.2deg);
+}
+
+.grid-cards>.card:nth-child(3n+3) {
+  transform: rotate(-0.8deg);
+}
+
 .card:hover {
-  border-color: var(--primary);
-  transform: translateY(-4px);
-  box-shadow: 0 12px 24px -10px rgba(0, 0, 0, 0.5);
+  transform: translateY(-5px) rotate(0deg) scale(1.02) !important;
+  box-shadow: 8px 8px 0px var(--border);
+}
+
+.card h3 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.grid-cards>.card:nth-child(3n+1) h3 {
+  color: var(--crayon-blue);
+}
+
+.grid-cards>.card:nth-child(3n+2) h3 {
+  color: var(--crayon-pink);
+}
+
+.grid-cards>.card:nth-child(3n+3) h3 {
+  color: var(--crayon-orange);
 }
 
 .card-selected {
-  border-color: var(--primary);
+  border-color: var(--crayon-purple) !important;
+  box-shadow: 6px 6px 0px var(--crayon-purple) !important;
 }
 
 .balance-card {
   gap: 0.75rem;
+  transform: rotate(0.5deg);
 }
 
 .balance-amount {
   display: block;
   font-size: 2rem;
+  color: var(--crayon-purple);
   line-height: 1.1;
+  font-weight: 800;
 }
 
-.freelancer-card {
-  min-width: 0;
-}
+/* ==========================================================================
+   BUTTONS AND ACTIONS
+   ========================================================================== */
 
-.freelancer-card-header {
-  display: grid;
-  gap: 0.35rem;
-  min-width: 0;
-}
-
-.freelancer-card-header h3 {
-  margin: 0;
-}
-
-.wallet-address-text {
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-}
-
-.job-card {
-  gap: 0.85rem;
-}
-
-.job-card-header,
-.section-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.job-card-header h3,
-.section-heading h3 {
-  margin: 0;
-}
-
-.job-meta {
-  display: grid;
-  gap: 0.35rem;
-}
-
-.status-pill {
+button,
+.btn-link {
+  border: 3px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--crayon-yellow);
+  color: #000000;
+  padding: 0.6rem 1.6rem;
+  cursor: pointer;
+  text-decoration: none;
   display: inline-flex;
   align-items: center;
-  width: fit-content;
-  min-height: 28px;
-  padding: 0.25rem 0.65rem;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  color: var(--muted);
-  background: var(--surface-2);
-  font-size: 0.78rem;
+  justify-content: center;
   font-weight: 700;
+  font-size: 1.05rem;
+  box-shadow: 4px 4px 0px var(--border);
+  transition: var(--transition);
 }
 
-.status-pill-open {
-  border-color: color-mix(in srgb, #22c55e 40%, var(--border));
-  color: #22c55e;
+button:hover,
+.btn-link:hover {
+  background: var(--crayon-pink);
+  color: #ffffff;
+  transform: translateY(-3px) rotate(-1deg);
+  box-shadow: 6px 6px 0px var(--border);
 }
 
-.status-pill-assigned {
-  border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
-  color: var(--primary);
+button:active,
+.btn-link:active {
+  transform: translateY(2px) rotate(0deg);
+  box-shadow: 1px 1px 0px var(--border);
 }
 
-.status-pill-completed {
-  border-color: color-mix(in srgb, #22c55e 55%, var(--border));
-  color: #22c55e;
-}
-
-.payment-summary {
-  display: grid;
-  gap: 0.5rem;
-  padding: 1rem;
-  border: 1px solid color-mix(in srgb, #22c55e 45%, var(--border));
-  border-radius: 8px;
-  background: color-mix(in srgb, #22c55e 8%, var(--surface));
-}
-
-.payment-summary strong {
-  font-size: 2rem;
-  line-height: 1.1;
-}
-
-.payment-summary small {
+button:disabled {
+  background: var(--pill-bg);
   color: var(--muted);
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
 }
 
-.payment-row {
+/* Secondary / ghost actions */
+.ghost {
+  background: var(--surface);
+  color: var(--text);
+  border: 3px solid var(--border);
+}
+
+.ghost:hover {
+  background: var(--crayon-blue);
+  color: #000000;
+}
+
+.theme-toggle {
+  width: 44px;
+  height: 44px;
+  padding: 0;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
+  font-size: 1.3rem;
+  border-radius: 50% !important;
+}
+
+.row-actions {
+  display: flex;
   gap: 1rem;
-  padding: 1rem;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--surface-2);
+  flex-wrap: wrap;
 }
 
-.payment-row > div {
-  display: grid;
-  gap: 0.3rem;
-}
-
-.payment-row small {
-  color: var(--muted);
-}
-
-.review-milestones-card {
-  scroll-margin-top: 96px;
-}
-
-.dashboard-section {
-  display: grid;
-  gap: 1rem;
-  margin-top: 1.5rem;
-}
-
-.freelancer-workspace {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(360px, 430px);
-  gap: 1.5rem;
-  align-items: start;
-}
-
-.job-list-pane,
-.job-detail-pane,
-.stacked-list {
-  display: grid;
-  gap: 1rem;
-}
-
-.job-detail-pane {
-  position: sticky;
-  top: 96px;
-  max-height: calc(100vh - 120px);
-  overflow: auto;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 1rem;
-  background: color-mix(in srgb, var(--surface) 88%, var(--bg));
-}
-
-.compact-card,
-.compact-form {
-  padding: 1rem;
-}
-
-.compact-form {
-  gap: 1rem;
-}
-
-.section-heading span {
-  color: var(--muted);
-  font-size: 0.85rem;
-  font-weight: 700;
-}
-
-.empty-state {
-  margin: 0;
-  color: var(--muted);
-  border: 1px dashed var(--border);
-  border-radius: 8px;
-  padding: 1rem;
+.btn-link.ghost {
   background: var(--surface);
 }
 
-.pill-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
+/* ==========================================================================
+   FORMS & INPUTS
+   ========================================================================== */
 
 .grid-form {
   background: var(--surface);
-  border: 1px solid var(--border);
+  border: 3px solid var(--border);
   border-radius: var(--radius);
-  padding: 2rem;
+  padding: 2.2rem;
   display: grid;
   gap: 1.5rem;
+  box-shadow: 6px 6px 0px var(--border);
+  transform: rotate(0.3deg);
 }
 
 label {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--muted);
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: var(--text);
 }
 
 input,
 textarea,
 select {
-  padding: 0.75rem 1rem;
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  padding: 0.7rem 1rem;
+  border: 3px solid var(--border);
+  border-radius: var(--radius-sm);
   background: var(--input-bg);
   color: var(--text);
   outline: none;
+  font-size: 1rem;
   transition: var(--transition);
-}
-
-/* Make number fields text-like (no spinner arrows) */
-input[type="number"]::-webkit-outer-spin-button,
-input[type="number"]::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-
-input[type="number"] {
-  -moz-appearance: textfield;
-  appearance: textfield;
 }
 
 input:focus,
 textarea:focus,
 select:focus {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 20%, transparent);
+  border-color: var(--crayon-purple);
+  transform: scale(1.01);
+  box-shadow: 3px 3px 0px var(--crayon-purple);
 }
 
-button,
-.btn-link {
-  border: none;
-  border-radius: 8px;
-  background: var(--primary);
-  color: #ffffff;
-  padding: 0.75rem 1.5rem;
-  cursor: pointer;
-  text-decoration: none;
+/* ==========================================================================
+   PILLS & BADGES
+   ========================================================================== */
+
+.status-pill {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  font-weight: 600;
-  font-size: 0.9375rem;
-  transition: var(--transition);
-}
-
-button:hover,
-.btn-link:hover {
-  background: var(--primary-strong);
-  transform: scale(1.02);
-}
-
-button:active,
-.btn-link:active {
-  transform: scale(0.98);
-}
-
-.ghost {
-  background: transparent;
+  width: fit-content;
+  min-height: 32px;
+  padding: 0.2rem 0.8rem;
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
   color: var(--text);
-  border: 1px solid var(--border);
+  background: var(--pill-bg);
+  font-size: 0.9rem;
+  font-weight: bold;
+  transform: rotate(1deg);
 }
 
-.theme-toggle {
-  width: 40px;
-  height: 40px;
-  padding: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.2rem;
-  border-radius: 50%;
+.status-pill-open {
+  border-color: var(--crayon-green);
+  color: var(--crayon-green);
 }
 
-.row-actions {
-  display: flex;
-  gap: 0.75rem;
-  flex-wrap: wrap;
+.status-pill-assigned {
+  border-color: var(--crayon-blue);
+  color: var(--crayon-blue);
 }
 
-.inline-muted {
-  display: inline-flex;
-  align-items: center;
-  color: var(--muted);
-  font-size: 0.875rem;
-  font-weight: 600;
+.status-pill-completed {
+  border-color: var(--crayon-purple);
+  color: var(--crayon-purple);
 }
+
+/* ==========================================================================
+   MILESTONES & WORKSPACE DETAILS
+   ========================================================================== */
 
 .milestone-row {
   display: grid;
-  gap: 1rem;
+  gap: 1.2rem;
   grid-template-columns: 2fr 1fr 1fr 1fr;
-  padding: 1rem;
+  padding: 1.2rem;
   background: var(--surface-2);
-  border-radius: 8px;
-  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  border: 3px solid var(--border);
+  margin-bottom: 0.8rem;
+  transform: rotate(-0.5deg);
+}
+
+.milestone-row:nth-child(even) {
+  transform: rotate(0.5deg);
 }
 
 .milestone-header {
@@ -535,24 +554,57 @@ button:active,
   padding-bottom: 0.6rem;
 }
 
-.milestone-header span {
-  color: var(--muted);
-  font-size: 0.78rem;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
+.payment-summary {
+  display: grid;
+  gap: 0.5rem;
+  padding: 1.2rem;
+  border: 3px solid var(--crayon-green);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  box-shadow: 4px 4px 0px var(--crayon-green);
+  transform: rotate(0.8deg);
 }
 
-.milestone-help {
-  margin: -0.25rem 0 0.4rem;
-  color: var(--muted);
-  font-size: 0.82rem;
+.payment-summary strong {
+  font-size: 2.2rem;
+  line-height: 1.1;
+  color: var(--crayon-green);
 }
 
-.status {
-  color: var(--primary);
-  font-weight: 600;
+.payment-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.2rem;
+  padding: 1.2rem;
+  border: 3px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
 }
+
+.freelancer-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 430px);
+  gap: 2rem;
+  align-items: start;
+}
+
+.job-detail-pane {
+  position: sticky;
+  top: 110px;
+  max-height: calc(100vh - 140px);
+  overflow: auto;
+  border: 3px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  background: var(--surface);
+  box-shadow: 6px 6px 0px var(--border);
+  transform: rotate(-0.4deg);
+}
+
+/* ==========================================================================
+   START GATE / SPLASH PAGE
+   ========================================================================== */
 
 .start-gate {
   min-height: calc(100vh - 120px);
@@ -564,89 +616,135 @@ button:active,
 
 .start-visual {
   position: absolute;
-  width: 1000px;
-  height: 1000px;
+  width: 900px;
+  height: 900px;
   display: grid;
   place-items: center;
   pointer-events: none;
-  opacity: 0.95;
-  transform: none;
+  opacity: 0.85;
 }
 
 .orbit {
   position: absolute;
-  border-radius: 999px;
-  border: 1px solid var(--border);
+  border-radius: 50%;
+  border: 3px dashed var(--border);
 }
 
 .orbit-a {
-  width: 700px;
-  height: 700px;
-  border-color: #d4af37;
-  animation: spinSlow 12s linear infinite;
+  width: 600px;
+  height: 600px;
+  border-color: var(--crayon-yellow);
+  animation: spinSlow 20s linear infinite;
 }
 
 .orbit-b {
-  width: 900px;
-  height: 900px;
-  border-color: #7c3aed;
-  animation: spinReverse 16s linear infinite;
+  width: 800px;
+  height: 800px;
+  border-color: var(--crayon-blue);
+  animation: spinReverse 25s linear infinite;
 }
 
 .orbit-c {
-  width: 500px;
-  height: 500px;
-  border-color: #d4af37;
-  animation: pulseRing 3.2s ease-in-out infinite;
+  width: 400px;
+  height: 400px;
+  border-color: var(--crayon-pink);
+  animation: pulseRing 4s ease-in-out infinite;
 }
 
-.pulse-core {
-  width: 24px;
-  height: 24px;
-  border-radius: 999px;
-  background: #d4af37;
-  box-shadow: 0 0 25px rgba(212, 175, 55, 0.75);
-  animation: pulseCore 2.5s ease-in-out infinite;
+.start-scroll-container {
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 0;
 }
 
-.start-card {
+.start-3d-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
-  max-width: 420px;
-  border: none;
-  background: transparent;
-  border-radius: var(--radius);
-  padding: 1.5rem;
-  display: grid;
-  gap: 0.9rem;
-  text-align: center;
-  position: relative;
-  z-index: 2;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
 }
 
-.start-card h1 {
-  margin: 0;
+.start-gate {
+  height: 100vh;
+  width: 100vw;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  position: relative;
+  padding: 3rem 1.5rem;
+  overflow: hidden;
+}
+
+.pinned-gate-card {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 10;
+  width: 90%;
+  max-width: 440px;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 2.5rem;
+  text-align: center;
+}
+
+.scroll-indicator-container {
+  position: absolute;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  z-index: 5;
+  color: var(--text);
+  font-size: 1rem;
+  font-weight: 500;
+  opacity: 0.75;
+  animation: floatDown 2s ease-in-out infinite;
+}
+
+.scroll-arrow {
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+@keyframes floatDown {
+
+  0%,
+  100% {
+    transform: translate(-50%, 0);
+  }
+
+  50% {
+    transform: translate(-50%, 6px);
+  }
 }
 
 .start-logo {
-  font-family: "Bodoni 72", Didot, "Playfair Display", Georgia, serif;
-  font-size: clamp(5rem, 16vw, 10.5rem);
-  line-height: 0.88;
+  font-family: 'Cabin Sketch', cursive;
+  font-size: 6.5rem;
+  line-height: 0.9;
   font-weight: 900;
-  letter-spacing: 0;
-  background:
-    linear-gradient(120deg, #ffffff 5%, #f0abfc 34%, #a855f7 64%, #facc15 96%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  text-shadow:
-    0 0 24px color-mix(in srgb, var(--primary) 45%, transparent),
-    0 18px 45px rgba(0, 0, 0, 0.5);
-  filter: drop-shadow(0 0 14px color-mix(in srgb, #facc15 18%, transparent));
+  margin-bottom: 0.5rem;
+  color: var(--crayon-purple);
+  text-shadow: 3px 3px 0px var(--crayon-yellow), -3px -3px 0px var(--crayon-pink);
+  background: none;
+  -webkit-text-fill-color: initial;
 }
 
-.hidden-link {
-  display: none;
-}
-
+/* Animations */
 @keyframes spinSlow {
   from {
     transform: rotate(0deg);
@@ -671,13 +769,13 @@ button:active,
 
   0%,
   100% {
-    transform: scale(0.96);
-    opacity: 0.75;
+    transform: scale(0.95);
+    opacity: 0.6;
   }
 
   50% {
-    transform: scale(1.04);
-    opacity: 1;
+    transform: scale(1.05);
+    opacity: 0.9;
   }
 }
 
@@ -686,19 +784,18 @@ button:active,
   0%,
   100% {
     transform: scale(1);
-    opacity: 0.85;
+    opacity: 0.9;
   }
 
   50% {
-    transform: scale(1.35);
+    transform: scale(1.3);
     opacity: 1;
   }
 }
 
-small {
-  color: var(--muted);
-  font-size: 0.8125rem;
-}
+/* ==========================================================================
+   RESPONSIVE OVERRIDES
+   ========================================================================== */
 
 @media (max-width: 860px) {
   .topbar {
@@ -707,7 +804,6 @@ small {
 
   .navlinks {
     display: none;
-    /* Hide nav for mobile for now or use a burger */
   }
 
   .milestone-row {
@@ -726,15 +822,24 @@ small {
   .job-detail-pane {
     position: static;
     max-height: none;
+    transform: none !important;
   }
 
   .hero h1 {
-    font-size: 2rem;
+    font-size: 2.6rem;
+  }
+
+  .hero {
+    padding: 2rem 1.5rem;
+    transform: none !important;
   }
 
   .start-visual {
-    width: 600px;
-    height: 600px;
-    opacity: 0.75;
+    width: 500px;
+    height: 500px;
+  }
+
+  .card {
+    transform: none !important;
   }
 }
