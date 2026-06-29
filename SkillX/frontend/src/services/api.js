@@ -1,5 +1,25 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:4000";
 
+/**
+ * Map raw error text to a friendly message the user can actually understand.
+ */
+function friendlyError(rawMessage, statusCode) {
+  // HTML dumps from Cloudflare / reverse proxies
+  if (rawMessage && (rawMessage.includes("<!DOCTYPE") || rawMessage.includes("<html"))) {
+    if (statusCode === 521 || statusCode === 522 || statusCode === 523) {
+      return "Database service is temporarily unavailable. It may be paused — please try again in a few minutes.";
+    }
+    return "The server returned an unexpected response. Please try again later.";
+  }
+
+  // Backend is completely unreachable
+  if (!rawMessage || rawMessage === "Failed to fetch") {
+    return "Cannot reach the backend server. Make sure it is running on " + API_BASE_URL;
+  }
+
+  return rawMessage;
+}
+
 async function request(path, options = {}) {
   let res;
   try {
@@ -9,20 +29,27 @@ async function request(path, options = {}) {
     });
   } catch (_error) {
     throw new Error(
-      "Cannot reach backend API. Check backend server and CORS configuration."
+      "Cannot reach backend API. Check that the backend server is running."
     );
   }
 
   const contentType = res.headers.get("content-type") || "";
+
+  // Guard: if the response is HTML (Cloudflare error, proxy error, etc.)
+  // never try to parse it as JSON — just surface a clean message
+  if (contentType.includes("text/html")) {
+    throw new Error(friendlyError(await res.text(), res.status));
+  }
+
   const data = contentType.includes("application/json")
     ? await res.json()
     : { error: await res.text() };
 
   if (!res.ok) {
     const message = data.details
-      ? `${data.error} - ${data.details}`
+      ? `${data.error} — ${data.details}`
       : data.error || "API request failed";
-    throw new Error(message);
+    throw new Error(friendlyError(message, res.status));
   }
 
   return data;

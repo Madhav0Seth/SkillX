@@ -7,8 +7,12 @@ function shortAddress(value) {
 }
 
 export default function Header({ theme, onToggleTheme }) {
-  const { address, balance, isConnected, connectWallet, disconnectWallet, loading } =
+  const { address, balance, isConnected, connectWallet, disconnectWallet, loading, role, hasProfile } =
     useWallet();
+
+  // Show nav links based on registered role
+  const showClient = role === "client" || role === "both";
+  const showFreelancer = role === "freelancer" || role === "both";
 
   return (
     <header className="topbar">
@@ -19,10 +23,10 @@ export default function Header({ theme, onToggleTheme }) {
       {isConnected ? (
         <nav className="navlinks">
           <Link to="/home">Home</Link>
-          <Link to="/role">Role</Link>
-          <Link to="/client">Client</Link>
-          <Link to="/freelancer">Freelancer</Link>
+          {showClient && <Link to="/client">Client</Link>}
+          {showFreelancer && <Link to="/freelancer">Freelancer</Link>}
           <Link to="/profile">Profile</Link>
+          <Link to="/role">{hasProfile ? "Edit Role" : "Set Role"}</Link>
         </nav>
       ) : (
         <div />
@@ -35,6 +39,7 @@ export default function Header({ theme, onToggleTheme }) {
         {isConnected ? (
           <>
             <div className="wallet-info">
+              {role && <span className="balance-pill" style={{ textTransform: "capitalize" }}>{role}</span>}
               <span className="balance-pill">{balance} XLM</span>
               <span className="wallet-pill">{shortAddress(address)}</span>
             </div>

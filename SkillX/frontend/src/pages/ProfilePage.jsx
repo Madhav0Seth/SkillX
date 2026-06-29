@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { useWallet } from "../context/WalletContext";
 import JobCard from "../components/JobCard";
 import { api } from "../services/api";
@@ -36,9 +37,8 @@ function formatXlm(value) {
 }
 
 export default function ProfilePage() {
-  const { address } = useWallet();
+  const { address, profile } = useWallet();
   const walletAddress = normalizeWallet(address);
-  const [profile, setProfile] = useState(null);
   const [clientJobs, setClientJobs] = useState([]);
   const [freelancerJobs, setFreelancerJobs] = useState([]);
   const [xlmBalance, setXlmBalance] = useState("");
@@ -69,7 +69,6 @@ export default function ProfilePage() {
   useEffect(() => {
     const loadProfileData = async () => {
       setStatus("");
-      setProfile(null);
       setClientJobs([]);
       setFreelancerJobs([]);
       setXlmBalance("");
@@ -89,9 +88,8 @@ export default function ProfilePage() {
       }
 
       try {
-        const [profileResult, clientJobsResult, freelancerJobsResult] =
+        const [clientJobsResult, freelancerJobsResult] =
           await Promise.all([
-            api.getProfile(walletAddress),
             api.getJobs({ client_wallet: walletAddress, limit: 20 }),
             api.getJobs({
               freelancer_wallet: walletAddress,
@@ -100,7 +98,6 @@ export default function ProfilePage() {
             })
           ]);
 
-        setProfile(profileResult.profile);
         setClientJobs(clientJobsResult.jobs || []);
         setFreelancerJobs(freelancerJobsResult.jobs || []);
       } catch (error) {
@@ -165,7 +162,7 @@ export default function ProfilePage() {
             </div>
           </>
         ) : (
-          <p>Register on the Role page to complete your profile.</p>
+          <p><Link to="/role">Set up your profile</Link> to get started on SkillX.</p>
         )}
       </div>
 
