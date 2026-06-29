@@ -2,21 +2,24 @@
    SKILLX CRAYON & MATTE PAPER DESIGN SYSTEM
    ========================================================================== */
 
-:root {
-  /* Clean Premium Sketchbook (Light Theme) */
-  --bg: #f5f6f8;
-  --bg-elevated: #ebedf0;
-  --surface: #ffffff;
-  --surface-2: #fafbfc;
-  --text: #1a1a1e;
+:root,
+[data-theme="light"],
+:root[data-theme="light"],
+body[data-theme="light"] {
+  /* Soft Premium Matte Sketchbook Paper */
+  --bg: #eceae4;
+  --bg-elevated: #dfdbd3;
+  --surface: #f7f6f2;
+  --surface-2: #efede7;
+  --text: #1c1d21;
   /* Charcoal marker */
-  --muted: #656b73;
-  --border: #1a1a1e;
+  --muted: #5e646d;
+  --border: #1c1d21;
   --primary: #9b5de5;
   --primary-strong: #7b3fd3;
-  --pill-bg: #ebedf0;
-  --pill-text: #1a1a1e;
-  --input-bg: #ffffff;
+  --pill-bg: #e4e1d9;
+  --pill-text: #1c1d21;
+  --input-bg: #fdfdfb;
   --radius: 12px 8px 14px 10px/10px 14px 8px 12px;
   /* Subtle, premium organic sketchbook corner rounding */
   --radius-sm: 6px 4px 8px 5px/5px 8px 4px 6px;
@@ -36,24 +39,26 @@
     radial-gradient(rgba(0, 0, 0, 0.03) 1px, transparent 0);
 }
 
-[data-theme="dark"] {
+[data-theme="dark"],
+:root[data-theme="dark"],
+body[data-theme="dark"] {
   /* Charcoal Black Blackboard (Dark Theme) */
-  --bg: #151619;
-  --bg-elevated: #0f1012;
-  --surface: #1f2125;
-  --surface-2: #27292f;
-  --text: #fdfbf7;
+  --bg: #121316;
+  --bg-elevated: #0a0b0d;
+  --surface: #1a1b1f;
+  --surface-2: #212328;
+  --text: #ece8df;
   /* Chalk white */
-  --muted: #9fa4af;
+  --muted: #8d929d;
   /* Dusty chalk grey */
-  --border: #fdfbf7;
+  --border: #ece8df;
   /* Clean white chalk line */
   --primary: #ffb3d9;
   /* Pink chalk */
   --primary-strong: #ff9dcf;
-  --pill-bg: #27292f;
-  --pill-text: #fdfbf7;
-  --input-bg: #0f1012;
+  --pill-bg: #212328;
+  --pill-text: #ece8df;
+  --input-bg: #0d0e10;
 
   /* Pastel Chalk Colors (Dark Theme) */
   --crayon-purple: #d1b3ff;
@@ -1226,4 +1231,181 @@ select:focus {
   color: var(--muted);
   font-weight: 600;
   min-width: 80px;
+}
+
+/* ==========================================================================
+   DASHBOARD SECTION & HEADER LAYOUT SYSTEM
+   ========================================================================== */
+.dashboard-container {
+  display: flex;
+  flex-direction: column;
+  gap: 3rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1rem 0;
+}
+
+.dashboard-header {
+  border-bottom: 3.5px solid var(--border);
+  padding-bottom: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.dashboard-header h2 {
+  font-size: 2.5rem;
+  margin: 0;
+  font-family: var(--font-fancy);
+  color: var(--primary);
+}
+
+.dashboard-header .subtitle {
+  font-size: 1.1rem;
+  color: var(--muted);
+  margin: 0.5rem 0 0 0;
+}
+
+.dashboard-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 2rem;
+  background: var(--surface);
+  border: 3.5px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 6px 6px 0px var(--border);
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding-bottom: 0.8rem;
+  border-bottom: 2.5px solid var(--border);
+  margin-bottom: 0.5rem;
+}
+
+.section-badge {
+  background: var(--primary);
+  color: var(--border);
+  font-weight: 800;
+  font-size: 0.9rem;
+  padding: 0.2rem 0.6rem;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-fancy);
+}
+
+.section-header h3 {
+  font-family: var(--font-fancy);
+  font-size: 1.6rem;
+  margin: 0;
+  color: var(--text);
+}
+
+/* ==========================================================================
+   EMPTY STATE ILLUSTRATION & ANIMAITON
+   ========================================================================== */
+.empty-state-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3.5rem 2rem;
+  text-align: center;
+  border: 3.5px dashed var(--muted);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  margin: 1rem 0;
+  transition: var(--transition);
+}
+
+.empty-state-container:hover {
+  border-color: var(--primary);
+  transform: translateY(-2px);
+  box-shadow: 4px 4px 0px var(--border);
+}
+
+.empty-state-icon-wrapper {
+  width: 90px;
+  height: 90px;
+  margin-bottom: 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.empty-state-svg {
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: var(--text);
+  stroke-width: 3.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(2px 2px 0px rgba(0,0,0,0.15));
+  animation: floatIllustration 4s ease-in-out infinite alternate;
+}
+
+.empty-state-container h4 {
+  font-family: var(--font-fancy);
+  font-size: 1.35rem;
+  margin: 0 0 0.5rem 0;
+  color: var(--text);
+}
+
+.empty-state-container p {
+  font-size: 0.95rem;
+  color: var(--muted);
+  max-width: 440px;
+  margin: 0 auto;
+  line-height: 1.5;
+}
+
+.header-icon {
+  margin-left: 0.2rem;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  animation: pulseIcon 3s ease-in-out infinite alternate;
+}
+
+@keyframes floatIllustration {
+  0% {
+    transform: translateY(0) rotate(-1.5deg);
+  }
+  100% {
+    transform: translateY(-8px) rotate(1.5deg);
+  }
+}
+
+@keyframes pulseIcon {
+  0% {
+    transform: scale(0.95);
+  }
+  100% {
+    transform: scale(1.08);
+  }
+}
+
+.workspace-card-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+  padding: 1.8rem;
+  background: var(--surface);
+  border: 3.5px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 5px 5px 0px var(--border);
+  margin-bottom: 2.2rem;
+  transition: var(--transition);
+}
+
+.workspace-card-section:hover {
+  transform: translateY(-3px);
+  box-shadow: 8px 8px 0px var(--border);
+}
+
+.workspace-card-section .section-heading {
+  border-bottom: 2px solid var(--border);
+  padding-bottom: 0.8rem;
+  margin-bottom: 0.5rem;
 }

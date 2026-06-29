@@ -1,9 +1,64 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { api } from "../services/api";
 import { contracts } from "../services/contracts";
 import { useWallet } from "../context/WalletContext";
 import JobCard from "../components/JobCard";
 import { getJobStatus, getMilestoneStatus } from "../utils/contractStatus";
+
+
+const EmptyState = ({ iconType, title, message, action }) => {
+  const getIcon = () => {
+    switch (iconType) {
+      case "search":
+        return (
+          <svg viewBox="0 0 100 100" className="empty-state-svg" style={{ stroke: "var(--crayon-blue)" }}>
+            <circle cx="45" cy="45" r="25" fill="none" strokeWidth="4" />
+            <line x1="63" y1="63" x2="90" y2="90" strokeWidth="6" strokeLinecap="round" />
+            <path d="M38 35a12 12 0 0 1 12 12" fill="none" strokeWidth="3" strokeLinecap="round" strokeDasharray="3 3" />
+          </svg>
+        );
+      case "jobs":
+        return (
+          <svg viewBox="0 0 100 100" className="empty-state-svg" style={{ stroke: "var(--crayon-purple)" }}>
+            <rect x="20" y="20" width="60" height="68" rx="8" fill="none" strokeWidth="4" />
+            <path d="M35 12h30v12H35z" fill="none" strokeWidth="4" />
+            <line x1="35" y1="40" x2="65" y2="40" strokeWidth="4" strokeLinecap="round" />
+            <line x1="35" y1="55" x2="65" y2="55" strokeWidth="4" strokeLinecap="round" />
+            <line x1="35" y1="70" x2="55" y2="70" strokeWidth="4" strokeLinecap="round" />
+            <circle cx="70" cy="40" r="4" fill="var(--crayon-purple)" />
+            <circle cx="70" cy="55" r="4" fill="var(--crayon-purple)" />
+          </svg>
+        );
+      case "select":
+        return (
+          <svg viewBox="0 0 100 100" className="empty-state-svg" style={{ stroke: "var(--crayon-yellow)" }}>
+            <path d="M50 15 L85 80 L15 80 Z" fill="none" strokeWidth="4" strokeLinejoin="round" />
+            <circle cx="50" cy="65" r="4" fill="var(--crayon-yellow)" />
+            <line x1="50" y1="35" x2="50" y2="52" strokeWidth="4" strokeLinecap="round" />
+          </svg>
+        );
+      default:
+        return (
+          <svg viewBox="0 0 100 100" className="empty-state-svg" style={{ stroke: "var(--crayon-pink)" }}>
+            <circle cx="50" cy="50" r="35" fill="none" strokeWidth="4" />
+            <line x1="35" y1="50" x2="65" y2="50" strokeWidth="4" strokeLinecap="round" />
+            <line x1="50" y1="35" x2="50" y2="65" strokeWidth="4" strokeLinecap="round" />
+          </svg>
+        );
+    }
+  };
+
+  return (
+    <div className="empty-state-container">
+      <div className="empty-state-icon-wrapper">
+        {getIcon()}
+      </div>
+      <h4>{title}</h4>
+      <p>{message}</p>
+      {action}
+    </div>
+  );
+};
 
 function canSubmitMilestone(milestones, idx) {
   const milestone = milestones[idx];
@@ -144,6 +199,10 @@ export default function FreelancerDashboard() {
   const [fileUrl, setFileUrl] = useState("");
   const [status, setStatus] = useState("");
   const [txHash, setTxHash] = useState("");
+
+  const openJobsRef = useRef(null);
+  const assignedJobsRef = useRef(null);
+  const detailPaneRef = useRef(null);
 
   const getStatusType = (msg) => {
     if (!msg) return "info";
@@ -328,6 +387,9 @@ export default function FreelancerDashboard() {
       if (!hydratedJobs.length) {
         setStatus("No jobs are assigned to your wallet yet.");
       }
+      setTimeout(() => {
+        assignedJobsRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 150);
     } catch (error) {
       setStatus(`My jobs fetch failed: ${error.message}`);
     }
@@ -350,6 +412,9 @@ export default function FreelancerDashboard() {
       if (!availableJobs.length) {
         setStatus("No open jobs found yet.");
       }
+      setTimeout(() => {
+        openJobsRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 150);
     } catch (error) {
       setStatus(`Open jobs fetch failed: ${error.message}`);
     }
@@ -402,6 +467,9 @@ export default function FreelancerDashboard() {
             : `Selected job ${synced.job.job_id}.`
         );
       }
+      setTimeout(() => {
+        detailPaneRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 150);
     } catch (error) {
       setStatus(`Select failed: ${error.message}`);
     }
@@ -648,196 +716,238 @@ export default function FreelancerDashboard() {
   const selectedJobNeedsSubmissionSync = hasSubmittedMilestone(milestones);
 
   return (
-    <section>
-      <h2>Freelancer Dashboard</h2>
-      <div className="card">
-        <h3>Jobs</h3>
-        <div className="row-actions">
-          <button onClick={loadMyJobs}>View My Jobs</button>
-          <button className="ghost" onClick={loadOpenJobs}>View Open Jobs</button>
-          <input
-            value={jobId}
-            onChange={(e) => setJobId(e.target.value)}
-            placeholder="Enter job ID"
-          />
-          <button onClick={loadJob}>Load Job</button>
-        </div>
+    <div className="dashboard-container">
+      <div className="dashboard-header">
+        <h2>Freelancer Dashboard</h2>
+        <p className="subtitle">Accept open jobs, submit milestones, and check on-chain payments.</p>
       </div>
 
-      <div className="freelancer-workspace">
-        <div className="job-list-pane">
-          <div className="dashboard-section">
-            <div className="section-heading">
-              <h3>Assigned to Me</h3>
-              <span>{assignedJobs.length} jobs</span>
-            </div>
-            {assignedJobs.length > 0 ? (
-              <div className="stacked-list">
-                {assignedJobs.map((item) => (
-                  <JobCard
-                    key={item.job_id}
-                    job={item}
-                    onSelect={selectJob}
-                    isSelected={job?.job_id === item.job_id}
-                    onReject={rejectJob}
-                    variant="assigned"
-                    statusLabel="In Progress"
-                    statusTone="assigned"
-                  />
-                ))}
-              </div>
-            ) : (
-              <p className="empty-state">Use View My Jobs to load jobs assigned to your wallet.</p>
-            )}
-          </div>
+      {/* SECTION 1: SEARCH & LOAD JOBS */}
+      <section className="dashboard-section">
+        <header className="section-header">
+          <span className="section-badge">01</span>
+          <h3>Job Controls</h3>
+        </header>
 
-          <div className="dashboard-section">
-            <div className="section-heading">
-              <h3>Completed</h3>
-              <span>{completedJobs.length} jobs</span>
-            </div>
-            {completedJobs.length > 0 ? (
-              <div className="stacked-list">
-                {completedJobs.map((item) => (
-                  <JobCard
-                    key={item.job_id}
-                    job={item}
-                    onSelect={selectJob}
-                    isSelected={job?.job_id === item.job_id}
-                    variant="completed"
-                    statusLabel="Completed"
-                    statusTone="completed"
-                    paymentAmount={formatPayment(getPaymentTotal(item.milestones))}
-                  />
-                ))}
-              </div>
-            ) : (
-              <p className="empty-state">Completed jobs will appear here after every milestone is approved and paid.</p>
-            )}
-          </div>
-
-          <div className="dashboard-section">
-            <div className="section-heading">
-              <h3>Open Jobs</h3>
-              <span>{openJobs.length} jobs</span>
-            </div>
-            {openJobs.length > 0 ? (
-              <div className="stacked-list">
-                {openJobs.map((item) => (
-                  <JobCard
-                    key={item.job_id}
-                    job={item}
-                    onSelect={selectJob}
-                    isSelected={job?.job_id === item.job_id}
-                    onAccept={acceptJob}
-                    onReject={rejectJob}
-                    variant="open"
-                  />
-                ))}
-              </div>
-            ) : (
-              <p className="empty-state">Use View Open Jobs to browse jobs without an assigned freelancer.</p>
-            )}
+        <div className="card" style={{ border: "none", boxShadow: "none", padding: 0, background: "transparent", gap: "1rem" }}>
+          <h3>Load and Filter Jobs</h3>
+          <div className="row-actions">
+            <button onClick={loadMyJobs}>View My Jobs</button>
+            <button className="ghost" onClick={loadOpenJobs}>View Open Jobs</button>
+            <input
+              value={jobId}
+              onChange={(e) => setJobId(e.target.value)}
+              placeholder="Enter job ID"
+            />
+            <button onClick={loadJob}>Load Job</button>
           </div>
         </div>
+      </section>
 
-        <aside className="job-detail-pane">
-          {job ? (
-            <>
+      {/* SECTION 2: WORKSPACE */}
+      <section className="dashboard-section">
+        <header className="section-header">
+          <span className="section-badge">02</span>
+          <h3>Freelancer Workspace</h3>
+        </header>
+
+        <div className="freelancer-workspace">
+          <div className="job-list-pane">
+            <div className="workspace-card-section" ref={assignedJobsRef}>
               <div className="section-heading">
-                <h3>Selected Job</h3>
-                <span>Job #{job.job_id}</span>
+                <h3>Assigned to Me</h3>
+                <span>{assignedJobs.length} jobs</span>
               </div>
-              <JobCard
-                job={job}
-                onAccept={job.freelancer_wallet || selectedJobCompleted ? undefined : acceptJob}
-                onReject={selectedJobCompleted ? undefined : rejectJob}
-                isSelected
-                statusLabel={selectedJobCompleted ? "Completed" : undefined}
-                statusTone={selectedJobCompleted ? "completed" : "default"}
-                paymentAmount={selectedJobCompleted ? formatPayment(selectedPaymentTotal) : undefined}
-              />
-
-              {selectedJobCompleted && (
-                <div className="payment-summary">
-                  <span className="status-pill status-pill-completed">Payment received</span>
-                  <h3>Money received</h3>
-                  <strong>{formatPayment(selectedPaymentTotal)}</strong>
-                  <small>{job.title} is complete. Escrow payment has been released to your freelancer wallet.</small>
-                </div>
-              )}
-
-              {milestones.length > 0 && (
-                <div className="card compact-card">
-                  <h3>Milestones</h3>
-                  {milestones.map((m, idx) => (
-                    <small key={m.milestone_id}>
-                      #{idx} - Milestone ID {m.milestone_id}: {m.name} ({m.status})
-                      {canSubmitMilestone(milestones, idx) ? " - ready to submit" : ""}
-                    </small>
+              {assignedJobs.length > 0 ? (
+                <div className="stacked-list">
+                  {assignedJobs.map((item) => (
+                    <JobCard
+                      key={item.job_id}
+                      job={item}
+                      onSelect={selectJob}
+                      isSelected={job?.job_id === item.job_id}
+                      variant="assigned"
+                      statusLabel="In Progress"
+                      statusTone="assigned"
+                    />
                   ))}
                 </div>
+              ) : (
+                <EmptyState
+                  iconType="jobs"
+                  title="No Assigned Jobs"
+                  message="Jobs assigned to your wallet will appear here. Click load to fetch your workspace."
+                  action={<button onClick={loadMyJobs} style={{ marginTop: "1rem" }}>View My Jobs</button>}
+                />
               )}
+            </div>
 
-              {normalizeWallet(job.freelancer_wallet) === walletAddress && !selectedJobCompleted && (
-                <form className="grid-form compact-form" onSubmit={submitMilestone}>
-                  <h3>Submit Completed Milestone</h3>
-                  <div className="row-actions">
-                    <button
-                      type="button"
-                      className={selectedJobNeedsSubmissionSync ? "" : "ghost"}
-                      onClick={syncSubmittedMilestoneOnChain}
-                    >
-                      Sync Submitted Milestone On-chain
-                    </button>
-                    <button type="button" className="ghost" onClick={syncOnChainAccept}>
-                      Sync On-chain Accept
-                    </button>
-                  </div>
-                  <label>
-                    Completed milestone
-                    <select
-                      value={milestoneId}
-                      onChange={(e) => setMilestoneId(e.target.value)}
-                      required
-                    >
-                      <option value="">Select milestone</option>
-                      {milestones.map((m, idx) => (
-                        <option
-                          key={m.milestone_id}
-                          value={m.milestone_id}
-                          disabled={!canSubmitMilestone(milestones, idx)}
-                        >
-                          #{idx} - {m.name} ({m.status})
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    Submission URL
-                    <input
-                      value={fileUrl}
-                      onChange={(e) => setFileUrl(e.target.value)}
-                      placeholder="https://files.example/submission.zip"
-                      required
+            <div className="workspace-card-section">
+              <div className="section-heading">
+                <h3>Completed Jobs</h3>
+                <span>{completedJobs.length} jobs</span>
+              </div>
+              {completedJobs.length > 0 ? (
+                <div className="stacked-list">
+                  {completedJobs.map((item) => (
+                    <JobCard
+                      key={item.job_id}
+                      job={item}
+                      onSelect={selectJob}
+                      isSelected={job?.job_id === item.job_id}
+                      variant="completed"
+                      statusLabel="Completed"
+                      statusTone="completed"
+                      paymentAmount={formatPayment(getPaymentTotal(item.milestones))}
                     />
-                  </label>
-                  <button type="submit" disabled={!milestoneId}>
-                    Submit Milestone
-                  </button>
-                  {!milestoneId && (
-                    <p className="empty-state">
-                      {getSubmissionHint(milestones)}
-                    </p>
-                  )}
-                </form>
+                  ))}
+                </div>
+              ) : (
+                <EmptyState
+                  iconType="jobs"
+                  title="No Completed Jobs"
+                  message="Once you finish all milestones for a job and receive your payout, it will appear here."
+                />
               )}
-            </>
-          ) : (
-            <p className="empty-state">Select one of your assigned jobs to submit milestones here.</p>
-          )}
-        </aside>
-      </div>
+            </div>
+
+            <div className="workspace-card-section" ref={openJobsRef}>
+              <div className="section-heading">
+                <h3>Open Jobs</h3>
+                <span>{openJobs.length} jobs</span>
+              </div>
+              {openJobs.length > 0 ? (
+                <div className="stacked-list">
+                  {openJobs.map((item) => (
+                    <JobCard
+                      key={item.job_id}
+                      job={item}
+                      onSelect={selectJob}
+                      isSelected={job?.job_id === item.job_id}
+                      onAccept={acceptJob}
+                      onReject={rejectJob}
+                      variant="open"
+                    />
+                  ))}
+                </div>
+              ) : (
+                <EmptyState
+                  iconType="search"
+                  title="Browse Open Projects"
+                  message="Look for jobs posted by clients that don't have an assigned freelancer yet."
+                  action={<button className="ghost" onClick={loadOpenJobs} style={{ marginTop: "1rem" }}>View Open Jobs</button>}
+                />
+              )}
+            </div>
+          </div>
+
+          <aside className="job-detail-pane" ref={detailPaneRef}>
+            {job ? (
+              <>
+                <div className="section-heading">
+                  <h3>Selected Job</h3>
+                  <span>Job #{job.job_id}</span>
+                </div>
+                <JobCard
+                  job={job}
+                  onAccept={job.freelancer_wallet || selectedJobCompleted ? undefined : acceptJob}
+                  onReject={job.freelancer_wallet || selectedJobCompleted ? undefined : rejectJob}
+                  isSelected
+                  statusLabel={selectedJobCompleted ? "Completed" : undefined}
+                  statusTone={selectedJobCompleted ? "completed" : "default"}
+                  paymentAmount={selectedJobCompleted ? formatPayment(selectedPaymentTotal) : undefined}
+                />
+
+                {selectedJobCompleted && (
+                  <div className="payment-summary">
+                    <span className="status-pill status-pill-completed">Payment received</span>
+                    <h3>Money received</h3>
+                    <strong>{formatPayment(selectedPaymentTotal)}</strong>
+                    <small>{job.title} is complete. Escrow payment has been released to your freelancer wallet.</small>
+                  </div>
+                )}
+
+                {milestones.length > 0 && (
+                  <div className="card compact-card" style={{ marginTop: "1rem" }}>
+                    <h3>Milestones</h3>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "0.8rem", marginTop: "0.5rem" }}>
+                      {milestones.map((m, idx) => (
+                        <div key={m.milestone_id} style={{ display: "flex", flexDirection: "column", gap: "0.2rem", padding: "0.6rem 0.8rem", border: "1.5px solid var(--border)", borderRadius: "var(--radius-sm)", background: "var(--surface-2)" }}>
+                          <strong style={{ fontSize: "0.95rem", color: "var(--text)" }}>#{idx} - {m.name}</strong>
+                          <span style={{ fontSize: "0.85rem", color: "var(--muted)" }}>
+                            Status: <span style={{ fontWeight: 600, color: m.status === "approved" || m.status === "paid" ? "var(--crayon-green)" : m.status === "submitted" ? "var(--crayon-blue)" : "var(--crayon-orange)" }}>{m.status}</span>
+                            {canSubmitMilestone(milestones, idx) ? " (ready to submit)" : ""}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {normalizeWallet(job.freelancer_wallet) === walletAddress && !selectedJobCompleted && (
+                  <form className="grid-form compact-form" onSubmit={submitMilestone} style={{ marginTop: "1rem" }}>
+                    <h3>Submit Completed Milestone</h3>
+                    <div className="row-actions">
+                      <button
+                        type="button"
+                        className={selectedJobNeedsSubmissionSync ? "" : "ghost"}
+                        onClick={syncSubmittedMilestoneOnChain}
+                      >
+                        Sync Submitted Milestone On-chain
+                      </button>
+                      <button type="button" className="ghost" onClick={syncOnChainAccept}>
+                        Sync On-chain Accept
+                      </button>
+                    </div>
+                    <label style={{ marginTop: "1rem" }}>
+                      Completed milestone
+                      <select
+                        value={milestoneId}
+                        onChange={(e) => setJobId ? setMilestoneId(e.target.value) : undefined}
+                        required
+                      >
+                        <option value="">Select milestone</option>
+                        {milestones.map((m, idx) => (
+                          <option
+                            key={m.milestone_id}
+                            value={m.milestone_id}
+                            disabled={!canSubmitMilestone(milestones, idx)}
+                          >
+                            #{idx} - {m.name} ({m.status})
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label>
+                      Submission URL
+                      <input
+                        value={fileUrl}
+                        onChange={(e) => setFileUrl(e.target.value)}
+                        placeholder="https://files.example/submission.zip"
+                        required
+                      />
+                    </label>
+                    <button type="submit" disabled={!milestoneId}>
+                      Submit Milestone
+                    </button>
+                    {!milestoneId && (
+                      <p className="empty-state">
+                        {getSubmissionHint(milestones)}
+                      </p>
+                    )}
+                  </form>
+                )}
+              </>
+            ) : (
+              <EmptyState
+                iconType="select"
+                title="No Job Selected"
+                message="Select any job card from the lists to view detailed milestone breakdowns, submit work, or sync on-chain statuses."
+              />
+            )}
+          </aside>
+        </div>
+      </section>
       {status && (
         <div className="status-modal-overlay" onClick={handleDismiss}>
           <div className="status-modal-content" onClick={(e) => e.stopPropagation()}>
@@ -875,6 +985,6 @@ export default function FreelancerDashboard() {
           </div>
         </div>
       )}
-    </section>
+    </div>
   );
 }
