@@ -1,23 +1,36 @@
 import { Link } from "react-router-dom";
+import { useWallet } from "../context/WalletContext";
 
 export default function HomePage() {
+  const { hasProfile, profile } = useWallet();
+
   return (
     <div className="home-page">
       <section className="hero">
         <div className="hero-content">
-          <span className="badge">New Era of Freelancing</span>
+          <span className="badge">
+            {hasProfile ? `Welcome back, ${profile?.name || "Freelancer"}!` : "Please register your profile"}
+          </span>
           <h1>Hire top Web3 talent, <span className="text-gradient">fast.</span></h1>
           <p>
             The first Fiverr-style freelance marketplace built on Stellar. 
             Experience trustless milestones and secure on-chain escrow payments.
           </p>
           <div className="row-actions">
-            <Link className="btn-link" to="/client">
-              Hire Talent
-            </Link>
-            <Link className="btn-link ghost" to="/freelancer">
-              Find Work
-            </Link>
+            {!hasProfile ? (
+              <Link className="btn-link" to="/role" style={{ backgroundColor: "var(--primary)", color: "white" }}>
+                Complete Registration
+              </Link>
+            ) : (
+              <>
+                <Link className="btn-link" to="/client">
+                  Hire Talent
+                </Link>
+                <Link className="btn-link ghost" to="/freelancer">
+                  Find Work
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </section>

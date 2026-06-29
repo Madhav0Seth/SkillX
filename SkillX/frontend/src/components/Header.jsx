@@ -7,7 +7,7 @@ function shortAddress(value) {
 }
 
 export default function Header({ theme, onToggleTheme }) {
-  const { address, balance, isConnected, connectWallet, disconnectWallet, loading, role, hasProfile } =
+  const { address, balance, isConnected, connectWallet, disconnectWallet, loading, role, hasProfile, profile } =
     useWallet();
 
   // Show nav links based on registered role

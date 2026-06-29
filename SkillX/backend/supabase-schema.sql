@@ -4,6 +4,8 @@ create table if not exists users (
   skills text[] not null default '{}',
   bio text not null default '',
   portfolio text not null default '',
+  avatar_url text,
+  name text,
   created_at timestamptz not null default now()
 );
 

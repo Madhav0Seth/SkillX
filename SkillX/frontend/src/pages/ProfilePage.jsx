@@ -128,14 +128,26 @@ export default function ProfilePage() {
       </div>
 
       <div className="card">
-        <p>
-          <strong>Wallet Identity:</strong> {address || "Connect wallet"}
-        </p>
+        <div style={{ display: "flex", alignItems: "center", gap: "1.5rem", marginBottom: "1.5rem" }}>
+          <div className="avatar-preview-lg" style={{ width: "85px", height: "85px", margin: 0 }}>
+            {profile?.avatar_url ? (
+              <img src={profile.avatar_url} alt="Profile" />
+            ) : (
+              <span className="avatar-preview-placeholder" style={{ fontSize: "2.4rem" }}>👤</span>
+            )}
+          </div>
+          <div>
+            <h3 style={{ margin: 0, fontSize: "1.4rem" }}>
+              {profile?.name || (profile?.role ? profile.role.toUpperCase() : "NO PROFILE")}
+            </h3>
+            <small style={{ opacity: 0.75, wordBreak: "break-all" }}>
+              {profile?.role ? `${profile.role.toUpperCase()} • ` : ""}{address || "Connect wallet"}
+            </small>
+          </div>
+        </div>
+
         {profile ? (
           <>
-            <p>
-              <strong>Role:</strong> {profile.role}
-            </p>
             <p>
               <strong>Bio:</strong> {profile.bio || "No bio added yet."}
             </p>

@@ -356,13 +356,11 @@ export default function StartPage() {
     };
   }, []);
 
-  if (isConnected && !profileLoading && hasProfile) {
-    if (role === "client") return <Navigate to="/client" replace />;
-    if (role === "freelancer") return <Navigate to="/freelancer" replace />;
-    return <Navigate to="/home" replace />;
-  }
-
-  if (isConnected && !profileLoading && !hasProfile) {
+  // Wait until both wallet connection AND profile fetching are fully complete
+  if (isConnected && !loading && !profileLoading) {
+    if (hasProfile) {
+      return <Navigate to="/home" replace />;
+    }
     return <Navigate to="/role" replace />;
   }
 

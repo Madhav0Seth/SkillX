@@ -33,7 +33,6 @@ Create or update user profile.
   "portfolio": "https://portfolio.example"
 }
 ```
-
 ### `GET /freelancers?category=react`
 
 List freelancer profiles. `category` is optional and filters by `skills`.

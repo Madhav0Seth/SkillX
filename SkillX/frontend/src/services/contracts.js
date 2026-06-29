@@ -97,9 +97,36 @@ async function buildAndSendContractTx(
   });
 
   if (signed.error) throw new Error(signed.error);
-  const signedTx = TransactionBuilder.fromXDR(signed.signedTxXdr, networkPassphrase);
-  const sent = await server.sendTransaction(signedTx);
+
+  // Get the raw signed XDR string — do NOT parse it back through
+  // TransactionBuilder.fromXDR(), which causes "Bad union switch: 1"
+  // due to envelope format differences between Freighter v4 and SDK v13.
+  const signedXdr = signed.signedTxXdr || signed;
+
+  // Send the raw XDR directly to the Soroban RPC endpoint
+  const sent = await sendRawTransaction(signedXdr);
   return waitForTransaction(server, sent, method);
+}
+
+// Send a signed transaction XDR directly to the Soroban RPC without
+// needing to parse it back into a Transaction object first.
+async function sendRawTransaction(signedXdr) {
+  const response = await fetch(rpcUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "sendTransaction",
+      params: { transaction: signedXdr }
+    })
+  });
+
+  const data = await response.json();
+  if (data.error) {
+    throw new Error(data.error.message || JSON.stringify(data.error));
+  }
+  return data.result || {};
 }
 
 async function waitForTransaction(server, sent, method) {

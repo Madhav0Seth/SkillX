@@ -29,8 +29,31 @@ export default function JobCard({
       <p>{job.description}</p>
       <div className="job-meta">
         <small>Job ID: {job.job_id}</small>
-        <small>Client: {shortAddress(job.client_wallet)}</small>
-        <small>Freelancer: {shortAddress(job.freelancer_wallet)}</small>
+        
+        <div style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }}>
+          <small>Client:</small>
+          <div className="avatar-image-circle" style={{ width: "20px", height: "20px", borderWidth: "1.5px" }}>
+            {job.client?.avatar_url ? (
+              <img src={job.client.avatar_url} alt="Client Avatar" />
+            ) : (
+              <span style={{ fontSize: "0.6rem", opacity: 0.5 }}>👤</span>
+            )}
+          </div>
+          <small style={{ fontWeight: 600 }}>{job.client?.name || shortAddress(job.client_wallet)}</small>
+        </div>
+
+        <div style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }}>
+          <small>Freelancer:</small>
+          <div className="avatar-image-circle" style={{ width: "20px", height: "20px", borderWidth: "1.5px" }}>
+            {job.freelancer?.avatar_url ? (
+              <img src={job.freelancer.avatar_url} alt="Freelancer Avatar" />
+            ) : (
+              <span style={{ fontSize: "0.6rem", opacity: 0.5 }}>👤</span>
+            )}
+          </div>
+          <small style={{ fontWeight: 600 }}>{job.freelancer?.name || shortAddress(job.freelancer_wallet)}</small>
+        </div>
+
         {paymentAmount != null && <small>Received: {paymentAmount}</small>}
         <small>Created: {job.created_at ? new Date(job.created_at).toLocaleString() : "Unknown"}</small>
       </div>

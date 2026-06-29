@@ -3,6 +3,7 @@ import { api } from "../services/api";
 import { contracts } from "../services/contracts";
 import { useWallet } from "../context/WalletContext";
 import FreelancerCard from "../components/FreelancerCard";
+import JobCard from "../components/JobCard";
 import { getMilestoneStatus } from "../utils/contractStatus";
 
 function emptyMilestone() {
@@ -432,15 +433,12 @@ export default function ClientDashboard() {
         {myJobs.length > 0 && (
           <div className="grid-cards">
             {myJobs.map((j) => (
-              <article className="card" key={j.job_id}>
-                <h4>{j.title}</h4>
-                <small>Job ID: {j.job_id}</small>
-                <small>Freelancer: {j.freelancer_wallet || "Unassigned"}</small>
-                <small>Created: {new Date(j.created_at).toLocaleString()}</small>
-                <button className="ghost" onClick={() => selectJob(j)}>
-                  Review Milestones
-                </button>
-              </article>
+              <JobCard
+                key={j.job_id}
+                job={j}
+                onSelect={selectJob}
+                isSelected={selectedJob?.job_id === j.job_id}
+              />
             ))}
           </div>
         )}
@@ -501,21 +499,29 @@ export default function ClientDashboard() {
 
       <form className="grid-form" onSubmit={createJob}>
         <h3>Create Job with Milestones</h3>
-        <label>
-          Freelancer Wallet (optional)
-          <input
-            value={freelancerWallet}
-            onChange={(e) => setFreelancerWallet(e.target.value)}
-          />
-        </label>
-        <div className="row-actions">
-          <button type="button" className="ghost" onClick={() => setFreelancerWallet("")}>
-            Create Open Job
-          </button>
-          <span className="inline-muted">
-            Leave freelancer empty unless you selected a registered freelancer above.
-          </span>
+        <div style={{ display: "flex", alignItems: "flex-end", gap: "1rem" }}>
+          <label style={{ flex: 1, marginBottom: 0 }}>
+            Freelancer Wallet (optional)
+            <input
+              value={freelancerWallet}
+              onChange={(e) => setFreelancerWallet(e.target.value)}
+              placeholder="Leave empty to create an open job..."
+            />
+          </label>
+          {freelancerWallet && (
+            <button
+              type="button"
+              className="ghost"
+              onClick={() => setFreelancerWallet("")}
+              style={{ height: "50px", padding: "0 1.5rem", whiteSpace: "nowrap" }}
+            >
+              Clear Selection
+            </button>
+          )}
         </div>
+        <span className="inline-muted" style={{ display: "block", marginBottom: "1.5rem", marginTop: "0.5rem" }}>
+          Leave the wallet field empty to create an "Open Job" that any freelancer can accept later.
+        </span>
         <label>
           Title
           <input value={title} onChange={(e) => setTitle(e.target.value)} required />
@@ -528,47 +534,49 @@ export default function ClientDashboard() {
             required
           />
         </label>
-        <div className="milestone-row milestone-header" aria-hidden="true">
-          <span>Milestone Name</span>
-          <span>Percentage (%)</span>
-          <span>Amount</span>
-          <span>Deadline</span>
-        </div>
-        <p className="milestone-help">
+        <p className="milestone-help" style={{ marginTop: "1rem", marginBottom: "0.5rem", opacity: 0.8 }}>
           Percentages across all milestones must total 100. Amount should match the payout for each milestone.
         </p>
-        {milestones.map((m, idx) => (
-          <div className="milestone-row" key={`milestone-${idx}`}>
-            <input
-              placeholder="Milestone name"
-              value={m.name}
-              onChange={(e) => updateMilestone(idx, "name", e.target.value)}
-              required
-            />
-            <input
-              type="number"
-              placeholder="Percentage"
-              value={m.percentage}
-              onChange={(e) =>
-                updateMilestone(idx, "percentage", Number(e.target.value))
-              }
-              required
-            />
-            <input
-              type="number"
-              placeholder="Amount"
-              value={m.amount}
-              onChange={(e) => updateMilestone(idx, "amount", Number(e.target.value))}
-              required
-            />
-            <input
-              type="date"
-              value={m.deadline}
-              onChange={(e) => updateMilestone(idx, "deadline", e.target.value)}
-              required
-            />
+        <div className="milestones-table-container">
+          <div className="milestone-row milestone-header" aria-hidden="true">
+            <span>Milestone Name</span>
+            <span>Percentage (%)</span>
+            <span>Amount</span>
+            <span>Deadline</span>
           </div>
-        ))}
+          {milestones.map((m, idx) => (
+            <div className="milestone-row" key={`milestone-${idx}`}>
+              <input
+                placeholder="Milestone name"
+                value={m.name}
+                onChange={(e) => updateMilestone(idx, "name", e.target.value)}
+                required
+              />
+              <input
+                type="number"
+                placeholder="Percentage"
+                value={m.percentage}
+                onChange={(e) =>
+                  updateMilestone(idx, "percentage", Number(e.target.value))
+                }
+                required
+              />
+              <input
+                type="number"
+                placeholder="Amount"
+                value={m.amount}
+                onChange={(e) => updateMilestone(idx, "amount", Number(e.target.value))}
+                required
+              />
+              <input
+                type="date"
+                value={m.deadline}
+                onChange={(e) => updateMilestone(idx, "deadline", e.target.value)}
+                required
+              />
+            </div>
+          ))}
+        </div>
         <div className="row-actions">
           <button type="button" className="ghost" onClick={addMilestone}>
             + Add Milestone

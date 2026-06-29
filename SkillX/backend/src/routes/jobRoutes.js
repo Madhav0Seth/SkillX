@@ -3,6 +3,34 @@ const { supabase } = require("../config/supabase");
 const { sha256 } = require("../utils/hash");
 const { badRequest, internalError } = require("../utils/http");
 
+// Check if dynamic columns exist
+let _columnsChecked = false;
+let avatarColumnAvailable = false;
+let nameColumnAvailable = false;
+
+async function checkDynamicColumns() {
+  if (_columnsChecked) return { avatarColumnAvailable, nameColumnAvailable };
+  const { error: avatarErr } = await supabase.from("users").select("avatar_url").limit(0);
+  avatarColumnAvailable = !avatarErr;
+  
+  const { error: nameErr } = await supabase.from("users").select("name").limit(0);
+  nameColumnAvailable = !nameErr;
+  
+  _columnsChecked = true;
+  return { avatarColumnAvailable, nameColumnAvailable };
+}
+
+function jobJoinSelect(hasAvatar, hasName) {
+  let userFields = "wallet_address, role, bio";
+  if (hasAvatar) userFields += ", avatar_url";
+  if (hasName) userFields += ", name";
+  return `
+    *,
+    client:users!client_wallet ( ${userFields} ),
+    freelancer:users!freelancer_wallet ( ${userFields} )
+  `;
+}
+
 const router = express.Router();
 
 function hasRole(profile, role) {
@@ -19,9 +47,11 @@ router.get("/jobs", async (req, res) => {
     const freelancerWallet = normalizeWallet(freelancer_wallet);
     const clientWallet = normalizeWallet(client_wallet);
 
+    const { avatarColumnAvailable, nameColumnAvailable } = await checkDynamicColumns();
+
     let query = supabase
       .from("jobs")
-      .select("*")
+      .select(jobJoinSelect(avatarColumnAvailable, nameColumnAvailable))
       .order("job_id", { ascending: false });
 
     if (freelancerWallet) {
@@ -325,9 +355,11 @@ router.get("/job/:jobId", async (req, res) => {
       return badRequest(res, "jobId is required");
     }
 
+    const { avatarColumnAvailable, nameColumnAvailable } = await checkDynamicColumns();
+
     const { data: job, error: jobError } = await supabase
       .from("jobs")
-      .select("*")
+      .select(jobJoinSelect(avatarColumnAvailable, nameColumnAvailable))
       .eq("job_id", Number(jobId))
       .single();
 
