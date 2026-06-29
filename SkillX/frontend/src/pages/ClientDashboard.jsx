@@ -61,6 +61,40 @@ export default function ClientDashboard() {
   const [status, setStatus] = useState("");
   const [txHash, setTxHash] = useState("");
 
+  const getStatusType = (msg) => {
+    if (!msg) return "info";
+    const lower = msg.toLowerCase();
+    if (
+      lower.includes("fail") ||
+      lower.includes("error") ||
+      lower.includes("incomplete") ||
+      lower.includes("invalid") ||
+      lower.includes("not registered") ||
+      lower.includes("not configured") ||
+      lower.includes("cannot") ||
+      lower.includes("mismatch")
+    ) {
+      return "error";
+    }
+    if (
+      lower.includes("success") ||
+      lower.includes("created") ||
+      lower.includes("funded") ||
+      lower.includes("approved") ||
+      lower.includes("released") ||
+      lower.includes("synced") ||
+      lower.includes("paid")
+    ) {
+      return "success";
+    }
+    return "info";
+  };
+
+  const handleDismiss = () => {
+    setStatus("");
+    setTxHash("");
+  };
+
   const loadMyJobs = async () => {
     setStatus("");
     if (!address) {
@@ -397,6 +431,7 @@ export default function ClientDashboard() {
         setTxHash(txResult.hash);
         setStatus(`Job created on-chain and escrow funded. DB Job ID: ${result.job.job_id}`);
       } catch (contractError) {
+        console.error("DETAILED CONTRACT ERROR:", contractError);
         const contractMessage = contractError.message.includes("VITE_JOB_MANAGER_CONTRACT_ID")
           ? "Job Manager contract ID is not configured."
           : contractError.message;
@@ -454,36 +489,42 @@ export default function ClientDashboard() {
             <button className="ghost" onClick={fundSelectedEscrow}>
               Fund Escrow
             </button>
-            <span className="inline-muted">
-              Total: {getMilestoneTotal(selectedMilestones).toLocaleString()}
+            <span className="inline-muted" style={{ fontWeight: 600, fontSize: "1.05rem", color: "var(--text)" }}>
+              Total Budget: {getMilestoneTotal(selectedMilestones).toLocaleString()} XLM
             </span>
           </div>
-          {selectedMilestones.map((milestone, idx) => (
-            <div className="payment-row" key={milestone.milestone_id}>
-              <div>
-                <strong>#{idx} - {milestone.name}</strong>
-                <small>{milestone.status} · {Number(milestone.amount).toLocaleString()} total</small>
-              </div>
-              {milestone.status === "submitted" ? (
-                <button onClick={() => approveMilestone(milestone)}>
-                  Approve &amp; Pay
-                </button>
-              ) : milestone.status === "approved" ? (
-                <div className="row-actions">
-                  <span className="status-pill status-pill-completed">
-                    approved
+          <div style={{ display: "flex", flexDirection: "column", gap: "1.2rem", marginTop: "1.2rem" }}>
+            {selectedMilestones.map((milestone, idx) => (
+              <div className="payment-row" key={milestone.milestone_id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "1.2rem 1.5rem", border: "2px solid var(--border)", borderRadius: "var(--radius-sm)", background: "var(--surface-2)", boxShadow: "3px 3px 0px var(--border)", margin: 0 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem", alignItems: "flex-start" }}>
+                  <strong style={{ fontSize: "1.1rem", color: "var(--text)" }}>#{idx} - {milestone.name}</strong>
+                  <span style={{ fontSize: "0.85rem", color: "var(--muted)" }}>
+                    Status: <span style={{ fontWeight: 600, color: milestone.status === "approved" || milestone.status === "paid" ? "var(--crayon-green)" : milestone.status === "submitted" ? "var(--crayon-blue)" : "var(--crayon-orange)" }}>{milestone.status}</span>
+                    {" "}·{" "}
+                    <strong>{Number(milestone.amount).toLocaleString()} XLM</strong>
                   </span>
-                  <button className="ghost" onClick={() => syncApprovedPaymentOnChain(milestone)}>
-                    Sync Payment
-                  </button>
                 </div>
-              ) : (
-                <span className={`status-pill ${milestone.status === "approved" ? "status-pill-completed" : "status-pill-assigned"}`}>
-                  {milestone.status}
-                </span>
-              )}
-            </div>
-          ))}
+                {milestone.status === "submitted" ? (
+                  <button onClick={() => approveMilestone(milestone)}>
+                    Approve &amp; Pay
+                  </button>
+                ) : milestone.status === "approved" ? (
+                  <div className="row-actions">
+                    <span className="status-pill status-pill-completed">
+                      approved
+                    </span>
+                    <button className="ghost" onClick={() => syncApprovedPaymentOnChain(milestone)}>
+                      Sync Payment
+                    </button>
+                  </div>
+                ) : (
+                  <span className={`status-pill ${milestone.status === "approved" ? "status-pill-completed" : "status-pill-assigned"}`}>
+                    {milestone.status}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -584,19 +625,42 @@ export default function ClientDashboard() {
           <button type="submit">Create Job</button>
         </div>
       </form>
-      {status && <p className="status">{status}</p>}
-      {txHash && (
-        <p className="status">
-          Transaction Hash:{" "}
-          <a
-            href={`https://stellar.expert/explorer/testnet/tx/${txHash}`}
-            target="_blank"
-            rel="noreferrer"
-            style={{ color: "var(--primary)", textDecoration: "underline" }}
-          >
-            {txHash.slice(0, 12)}...{txHash.slice(-12)}
-          </a>
-        </p>
+      {status && (
+        <div className="status-modal-overlay" onClick={handleDismiss}>
+          <div className="status-modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className={`status-icon ${getStatusType(status)}`}>
+              {getStatusType(status) === "success" && "✓"}
+              {getStatusType(status) === "error" && "✗"}
+              {getStatusType(status) === "info" && "ℹ"}
+            </div>
+            
+            <h4>
+              {getStatusType(status) === "success" && "Success!"}
+              {getStatusType(status) === "error" && "Error / Action Required"}
+              {getStatusType(status) === "info" && "Notice"}
+            </h4>
+            
+            <p className="status-message">{status}</p>
+            
+            {txHash && (
+              <div className="tx-wrapper">
+                <span>Transaction Hash:</span>
+                <a
+                  href={`https://stellar.expert/explorer/testnet/tx/${txHash}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="tx-link-btn"
+                >
+                  View on Stellar Expert ↗
+                </a>
+              </div>
+            )}
+            
+            <button className="status-close-btn" onClick={handleDismiss}>
+              Okay
+            </button>
+          </div>
+        </div>
       )}
     </section>
   );

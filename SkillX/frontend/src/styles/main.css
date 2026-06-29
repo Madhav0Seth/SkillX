@@ -1053,3 +1053,177 @@ select:focus {
   background: var(--primary);
   border: 2px solid var(--border);
 }
+
+/* ==========================================================================
+   STATUS NOTIFICATION MODAL SYSTEM
+   ========================================================================== */
+.status-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  backdrop-filter: blur(4px);
+  animation: fadeInStatus 0.2s ease-out;
+}
+
+.status-modal-content {
+  background: var(--surface);
+  border: 3px solid var(--border);
+  border-radius: var(--radius);
+  padding: 2rem;
+  width: 90%;
+  max-width: 480px;
+  box-shadow: 8px 8px 0px rgba(0, 0, 0, 0.35);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+  text-align: center;
+  position: relative;
+  animation: slideUpStatus 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.status-icon {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.75rem;
+  font-weight: bold;
+  border: 3px solid var(--border);
+}
+
+.status-icon.success {
+  background-color: var(--crayon-green);
+  color: white;
+}
+
+.status-icon.error {
+  background-color: var(--crayon-red);
+  color: white;
+}
+
+.status-icon.info {
+  background-color: var(--crayon-blue);
+  color: white;
+}
+
+.status-modal-content h4 {
+  margin: 0;
+  font-family: var(--font-fancy);
+  font-size: 1.6rem;
+  color: var(--text);
+}
+
+.status-message {
+  font-size: 1.05rem;
+  line-height: 1.5;
+  color: var(--text);
+  margin: 0;
+  word-break: break-word;
+  white-space: pre-line;
+}
+
+.tx-wrapper {
+  background: var(--bg-elevated);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.75rem 1rem;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.tx-wrapper span {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.tx-link-btn {
+  color: var(--primary-strong);
+  font-weight: bold;
+  text-decoration: underline;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.tx-link-btn:hover {
+  transform: scale(1.03);
+  color: var(--primary);
+}
+
+.status-close-btn {
+  background: var(--primary);
+  color: var(--border);
+  border: 2.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.6rem 2rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: var(--transition);
+  margin-top: 0.5rem;
+  box-shadow: 3px 3px 0px var(--border);
+}
+
+.status-close-btn:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0px var(--border);
+}
+
+.status-close-btn:active {
+  transform: translate(1px, 1px);
+  box-shadow: 2px 2px 0px var(--border);
+}
+
+@keyframes fadeInStatus {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUpStatus {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ==========================================================================
+   JOB META SPACING STYLING
+   ========================================================================== */
+.job-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-top: auto;
+  padding-top: 1rem;
+  border-top: 2px dashed var(--muted);
+}
+
+.job-meta-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.85rem;
+  color: var(--text);
+  flex-wrap: wrap;
+}
+
+.job-meta-item strong {
+  color: var(--muted);
+  font-weight: 600;
+  min-width: 80px;
+}
