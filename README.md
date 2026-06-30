@@ -13,6 +13,10 @@ SkillX is a decentralized freelance marketplace built on Stellar Testnet. Client
 | Backend API | [skillx-tqzb.onrender.com](https://skillx-tqzb.onrender.com) |
 | Demo video | [YouTube demo](https://youtu.be/GMjDWeJ5AYQ) |
 
+## Preview
+
+![SkillX main page](Images/MainPage.png)
+
 ## What We Built
 
 - React + Vite frontend with Freighter wallet connection.
@@ -26,6 +30,10 @@ SkillX is a decentralized freelance marketplace built on Stellar Testnet. Client
 - Transaction status modals with Stellar Expert transaction links.
 - GitHub Actions CI for frontend, backend, and contract checks.
 
+### Mobile Responsive UI
+
+![SkillX mobile responsive view](Images/MobileResponsiveSS.png)
+
 ## Deployed Contracts
 
 All contracts are deployed on Stellar Testnet.
@@ -36,6 +44,12 @@ All contracts are deployed on Stellar Testnet.
 | Job Manager | `CA7QPCOMXCEJ25EZ7XTTQ25IR6HK4CBUUG55GZGNKRCGJBIDEXHEYMKU` | [View contract](https://stellar.expert/explorer/testnet/contract/CA7QPCOMXCEJ25EZ7XTTQ25IR6HK4CBUUG55GZGNKRCGJBIDEXHEYMKU) |
 | Milestone Manager | `CDZ45H32U5YDEGKGBOWFFRY5XF73IE5TNGLM5UMYUIJUFIBONHZY5OZK` | [View contract](https://stellar.expert/explorer/testnet/contract/CDZ45H32U5YDEGKGBOWFFRY5XF73IE5TNGLM5UMYUIJUFIBONHZY5OZK) |
 | Reputation | `CAKQDKSSNVVBLBCHHL22Q3PDZ6VDGAUM2ERND4OKJ2VCL6JDDL4YZSUN` | [View contract](https://stellar.expert/explorer/testnet/contract/CAKQDKSSNVVBLBCHHL22Q3PDZ6VDGAUM2ERND4OKJ2VCL6JDDL4YZSUN) |
+
+### Stellar Expert Proof
+
+![Job Manager and Escrow contracts on Stellar Expert](Images/Job_manager_and_escrow_contracts.png)
+
+![Reputation and Milestone Manager contracts on Stellar Expert](Images/Reputation_and_milestone_manager_contracts.png)
 
 The UI uses Job Manager, Milestone Manager, and Escrow directly for the active marketplace flow. Reputation is included in the deployed contract suite, while the current profile reputation badges and activity stats are also computed from Supabase job and milestone history.
 
@@ -326,4 +340,3 @@ GitHub Actions also runs project checks from:
 - Never commit private keys, seed phrases, or Supabase service keys.
 - Use funded Stellar Testnet wallets for both client and freelancer flows.
 - Use Stellar Expert links to verify deployed contracts and transaction hashes.
-- Images/screenshots are intentionally left out here and can be added later.
