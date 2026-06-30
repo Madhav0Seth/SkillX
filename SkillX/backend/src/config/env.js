@@ -16,5 +16,6 @@ for (const key of requiredEnv) {
 module.exports = {
   port: process.env.PORT || 4000,
   supabaseUrl: process.env.SUPABASE_URL,
-  supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY
+  supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+  corsOrigin: process.env.CORS_ORIGIN || "*"
 };

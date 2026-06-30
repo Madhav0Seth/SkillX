@@ -2,7 +2,7 @@
 
 use soroban_sdk::{
     contract, contractimpl, contracttype,
-    Address, BytesN, Env,
+    Address, BytesN, Env, Symbol,
 };
 
 // ═══════════════════════════════════════════════════════════════
@@ -37,6 +37,35 @@ pub struct Job {
 // ═══════════════════════════════════════════════════════════════
 //  STORAGE KEYS
 // ═══════════════════════════════════════════════════════════════
+
+#[contracttype]
+#[derive(Clone, Debug, PartialEq)]
+pub struct JobCreatedEvent {
+    pub job_id: BytesN<32>,
+    pub client: Address,
+    pub total_amount: i128,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, PartialEq)]
+pub struct JobAcceptedEvent {
+    pub job_id: BytesN<32>,
+    pub freelancer: Address,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, PartialEq)]
+pub struct JobCancelledEvent {
+    pub job_id: BytesN<32>,
+    pub client: Address,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, PartialEq)]
+pub struct JobCompletedEvent {
+    pub job_id: BytesN<32>,
+    pub client: Address,
+}
 
 #[contracttype]
 pub enum DataKey {
@@ -171,9 +200,10 @@ impl JobManagerContract {
         }
 
         // 4. Persist
+        let client_for_event = client.clone();
         let job = Job {
             job_hash,
-            client,
+            client: client.clone(),
             freelancer: None,
             total_amount,
             status: JobStatus::Open,
@@ -181,6 +211,15 @@ impl JobManagerContract {
         env.storage()
             .persistent()
             .set(&DataKey::Job(job_id.clone()), &job);
+
+        env.events().publish(
+            (Symbol::new(&env, "JobCreated"), job_id.clone()),
+            &JobCreatedEvent {
+                job_id: job_id.clone(),
+                client: client_for_event,
+                total_amount,
+            },
+        );
 
         job_id
     }
@@ -214,6 +253,14 @@ impl JobManagerContract {
         env.storage()
             .persistent()
             .set(&DataKey::Job(job_id.clone()), &job);
+
+        env.events().publish(
+            (Symbol::new(&env, "JobAccepted"), job_id.clone()),
+            &JobAcceptedEvent {
+                job_id: job_id.clone(),
+                freelancer: freelancer.clone(),
+            },
+        );
 
         // Cross-contract: update the freelancer address on MilestoneManager
         let mm_id: Address = env
@@ -254,7 +301,15 @@ impl JobManagerContract {
         job.status = JobStatus::Completed;
         env.storage()
             .persistent()
-            .set(&DataKey::Job(job_id), &job);
+            .set(&DataKey::Job(job_id.clone()), &job);
+
+        env.events().publish(
+            (Symbol::new(&env, "JobCompleted"), job_id.clone()),
+            &JobCompletedEvent {
+                job_id: job_id.clone(),
+                client: job.client.clone(),
+            },
+        );
     }
 
     // ───────────────────────────────────────────────────────────
@@ -277,6 +332,14 @@ impl JobManagerContract {
         env.storage()
             .persistent()
             .set(&DataKey::Job(job_id.clone()), &job);
+
+        env.events().publish(
+            (Symbol::new(&env, "JobCancelled"), job_id.clone()),
+            &JobCancelledEvent {
+                job_id: job_id.clone(),
+                client: job.client.clone(),
+            },
+        );
 
         // Refund escrow
         let escrow_id: Address = env

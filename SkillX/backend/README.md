@@ -18,7 +18,42 @@ Express + Supabase backend for the decentralized freelance marketplace.
 
 Run `supabase-schema.sql` in Supabase SQL editor.
 
-## API
+## Soroban events
+
+The Soroban contracts now emit compact lifecycle events for important state transitions. These are intended for off-chain listeners, indexers, and the frontend to react to real-time updates without storing extra state on-chain.
+
+### Event sources
+- JobManager contract: emits job lifecycle events for job creation, acceptance, cancellation, and completion.
+- MilestoneManager contract: emits milestone lifecycle events for milestone creation, submission, and approval.
+- Escrow contract: emits funding, payment release, and refund events.
+- Reputation contract: emits reputation and rating updates after verified job completion and review submission.
+
+### Current event names
+- JobCreated
+- JobAccepted
+- JobCancelled
+- JobCompleted
+- MilestoneCreated
+- MilestoneSubmitted
+- MilestoneApproved
+- EscrowFunded
+- PaymentReleased
+- RefundIssued
+- ReputationUpdated
+- RatingSubmitted
+
+### Event payloads
+Each event carries only the minimal meaningful data needed by an external consumer:
+- job ID, addresses, amounts, milestone index, and rating where relevant.
+
+### Frontend integration guidance
+These events are suitable for:
+- updating the UI after a job or milestone changes state
+- refreshing dashboard lists in real time
+- notifying the user when escrow funds or payments move
+- keeping reputation badges and stats in sync
+
+These events are intentionally compact and do not duplicate full business data that already lives in the database or off-chain application state.
 
 ### `POST /profile`
 

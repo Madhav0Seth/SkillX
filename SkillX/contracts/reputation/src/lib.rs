@@ -1,7 +1,7 @@
 #![no_std]
 
 use soroban_sdk::{
-    contract, contractimpl, contracttype, Address, BytesN, Env,
+    contract, contractimpl, contracttype, Address, BytesN, Env, Symbol,
 };
 
 #[contracttype]
@@ -34,6 +34,22 @@ pub struct JobReputationState {
     pub reviewed: bool,
     pub review_rating: u32,
     pub review_hash: BytesN<32>,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, PartialEq)]
+pub struct ReputationUpdatedEvent {
+    pub freelancer: Address,
+    pub job_id: BytesN<32>,
+    pub paid_amount: i128,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, PartialEq)]
+pub struct RatingSubmittedEvent {
+    pub freelancer: Address,
+    pub job_id: BytesN<32>,
+    pub rating: u32,
 }
 
 #[contracttype]
@@ -109,7 +125,16 @@ impl ReputationContract {
             review_rating: 0,
             review_hash: BytesN::from_array(&env, &[0u8; 32]),
         };
-        env.storage().persistent().set(&DataKey::JobReputation(job_id), &state);
+        env.storage().persistent().set(&DataKey::JobReputation(job_id.clone()), &state);
+
+        env.events().publish(
+            (Symbol::new(&env, "ReputationUpdated"), job_id.clone()),
+            &ReputationUpdatedEvent {
+                freelancer: freelancer.clone(),
+                job_id: job_id.clone(),
+                paid_amount,
+            },
+        );
     }
 
     pub fn submit_review(
@@ -151,7 +176,16 @@ impl ReputationContract {
             .unwrap_or_else(|| panic!("reputation profile not found"));
         profile.rating_sum += rating;
         profile.rating_count += 1;
-        env.storage().persistent().set(&DataKey::Reputation(state.freelancer), &profile);
+        env.storage().persistent().set(&DataKey::Reputation(state.freelancer.clone()), &profile);
+
+        env.events().publish(
+            (Symbol::new(&env, "RatingSubmitted"), job_id.clone()),
+            &RatingSubmittedEvent {
+                freelancer: state.freelancer.clone(),
+                job_id: job_id.clone(),
+                rating,
+            },
+        );
     }
 
     pub fn record_acceptance(env: Env, freelancer: Address) {

@@ -604,7 +604,7 @@ export default function ClientDashboard() {
               {selectedMilestones.map((milestone, idx) => (
                 <div className="payment-row" key={milestone.milestone_id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "1.2rem 1.5rem", border: "2px solid var(--border)", borderRadius: "var(--radius-sm)", background: "var(--surface-2)", boxShadow: "3px 3px 0px var(--border)", margin: 0 }}>
                   <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem", alignItems: "flex-start" }}>
-                    <strong style={{ fontSize: "1.1rem", color: "var(--text)" }}>#{idx} - {milestone.name}</strong>
+                    <strong style={{ fontSize: "1.1rem", color: "var(--text)" }}>#{idx + 1} - {milestone.name}</strong>
                     <span style={{ fontSize: "0.85rem", color: "var(--muted)" }}>
                       Status: <span style={{ fontWeight: 600, color: milestone.status === "approved" || milestone.status === "paid" ? "var(--crayon-green)" : milestone.status === "submitted" ? "var(--crayon-blue)" : "var(--crayon-orange)" }}>{milestone.status}</span>
                       {" "}·{" "}

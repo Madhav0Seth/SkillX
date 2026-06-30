@@ -888,7 +888,7 @@ export default function FreelancerDashboard() {
                     <div style={{ display: "flex", flexDirection: "column", gap: "0.8rem", marginTop: "0.5rem" }}>
                       {milestones.map((m, idx) => (
                         <div key={m.milestone_id} style={{ display: "flex", flexDirection: "column", gap: "0.2rem", padding: "0.6rem 0.8rem", border: "1.5px solid var(--border)", borderRadius: "var(--radius-sm)", background: "var(--surface-2)" }}>
-                          <strong style={{ fontSize: "0.95rem", color: "var(--text)" }}>#{idx} - {m.name}</strong>
+                          <strong style={{ fontSize: "0.95rem", color: "var(--text)" }}>#{idx + 1} - {m.name}</strong>
                           <span style={{ fontSize: "0.85rem", color: "var(--muted)" }}>
                             Status: <span style={{ fontWeight: 600, color: m.status === "approved" || m.status === "paid" ? "var(--crayon-green)" : m.status === "submitted" ? "var(--crayon-blue)" : "var(--crayon-orange)" }}>{m.status}</span>
                             {canSubmitMilestone(milestones, idx) ? " (ready to submit)" : ""}
@@ -918,7 +918,7 @@ export default function FreelancerDashboard() {
                       Completed milestone
                       <select
                         value={milestoneId}
-                        onChange={(e) => setJobId ? setMilestoneId(e.target.value) : undefined}
+                        onChange={(e) => setMilestoneId(e.target.value)}
                         required
                       >
                         <option value="">Select milestone</option>
@@ -928,7 +928,7 @@ export default function FreelancerDashboard() {
                             value={m.milestone_id}
                             disabled={!canSubmitMilestone(milestones, idx)}
                           >
-                            #{idx} - {m.name} ({m.status})
+                            #{idx + 1} - {m.name} ({m.status})
                           </option>
                         ))}
                       </select>

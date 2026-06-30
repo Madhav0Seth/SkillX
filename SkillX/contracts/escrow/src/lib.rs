@@ -3,8 +3,36 @@
 use soroban_sdk::{
     contract, contractimpl, contracttype,
     token::Client as TokenClient,
-    Address, BytesN, Env,
+    Address, BytesN, Env, Symbol,
 };
+
+// ─────────────────────────────────────────────────────────
+//  Events
+// ─────────────────────────────────────────────────────────
+
+#[contracttype]
+#[derive(Clone, Debug, PartialEq)]
+pub struct EscrowFundedEvent {
+    pub job_id: BytesN<32>,
+    pub client: Address,
+    pub amount: i128,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, PartialEq)]
+pub struct PaymentReleasedEvent {
+    pub job_id: BytesN<32>,
+    pub freelancer: Address,
+    pub amount: i128,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, PartialEq)]
+pub struct RefundIssuedEvent {
+    pub job_id: BytesN<32>,
+    pub client: Address,
+    pub amount: i128,
+}
 
 // ─────────────────────────────────────────────────────────
 //  Storage key types
@@ -116,6 +144,15 @@ impl EscrowContract {
             .persistent()
             .set(&balance_key, &(current_balance + amount));
         env.storage().persistent().set(&client_key, &client);
+
+        env.events().publish(
+            (Symbol::new(&env, "EscrowFunded"), job_id.clone()),
+            &EscrowFundedEvent {
+                job_id: job_id.clone(),
+                client: client.clone(),
+                amount,
+            },
+        );
     }
 
     // ─────────────────────────────────────────────────────
@@ -170,12 +207,22 @@ impl EscrowContract {
             env.storage().persistent().remove(&balance_key);
             env.storage()
                 .persistent()
-                .remove(&DataKey::JobClient(job_id));
+                .remove(&DataKey::JobClient(job_id.clone()));
         } else {
             env.storage()
                 .persistent()
                 .set(&balance_key, &new_balance);
         }
+
+        let job_id_for_event = job_id.clone();
+        env.events().publish(
+            (Symbol::new(&env, "PaymentReleased"), job_id_for_event.clone()),
+            &PaymentReleasedEvent {
+                job_id: job_id_for_event,
+                freelancer: freelancer.clone(),
+                amount,
+            },
+        );
     }
 
     // ─────────────────────────────────────────────────────
@@ -224,7 +271,16 @@ impl EscrowContract {
         env.storage().persistent().remove(&balance_key);
         env.storage()
             .persistent()
-            .remove(&DataKey::JobClient(job_id));
+            .remove(&DataKey::JobClient(job_id.clone()));
+
+        env.events().publish(
+            (Symbol::new(&env, "RefundIssued"), job_id.clone()),
+            &RefundIssuedEvent {
+                job_id: job_id.clone(),
+                client: client.clone(),
+                amount: balance,
+            },
+        );
     }
 
     // ─────────────────────────────────────────────────────

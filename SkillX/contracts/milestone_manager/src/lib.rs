@@ -2,7 +2,7 @@
 
 use soroban_sdk::{
     contract, contractimpl, contracttype,
-    Address, BytesN, Env, Vec,
+    Address, BytesN, Env, Symbol, Vec,
 };
 
 // ═══════════════════════════════════════════════════════════════
@@ -53,6 +53,31 @@ pub struct JobMilestones {
 // ═══════════════════════════════════════════════════════════════
 //  STORAGE KEYS
 // ═══════════════════════════════════════════════════════════════
+
+#[contracttype]
+#[derive(Clone, Debug, PartialEq)]
+pub struct MilestoneCreatedEvent {
+    pub job_id: BytesN<32>,
+    pub client: Address,
+    pub freelancer: Address,
+    pub milestone_count: u32,
+    pub total_amount: i128,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, PartialEq)]
+pub struct MilestoneSubmittedEvent {
+    pub job_id: BytesN<32>,
+    pub milestone_index: u32,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, PartialEq)]
+pub struct MilestoneApprovedEvent {
+    pub job_id: BytesN<32>,
+    pub milestone_index: u32,
+    pub amount: i128,
+}
 
 #[contracttype]
 pub enum DataKey {
@@ -202,6 +227,8 @@ impl MilestoneManagerContract {
         }
 
         // 6. Persist
+        let client_for_event = client.clone();
+        let freelancer_for_event = freelancer.clone();
         let job_milestones = JobMilestones {
             client,
             freelancer,
@@ -210,7 +237,18 @@ impl MilestoneManagerContract {
         };
         env.storage()
             .persistent()
-            .set(&DataKey::Milestones(job_id), &job_milestones);
+            .set(&DataKey::Milestones(job_id.clone()), &job_milestones);
+
+        env.events().publish(
+            (Symbol::new(&env, "MilestoneCreated"), job_id.clone()),
+            &MilestoneCreatedEvent {
+                job_id: job_id.clone(),
+                client: client_for_event,
+                freelancer: freelancer_for_event,
+                milestone_count: n as u32,
+                total_amount,
+            },
+        );
     }
 
     // ───────────────────────────────────────────────────────────
@@ -251,6 +289,14 @@ impl MilestoneManagerContract {
 
         milestone.status = MilestoneStatus::Submitted;
         jm.milestones.set(milestone_index, milestone);
+
+        env.events().publish(
+            (Symbol::new(&env, "MilestoneSubmitted"), job_id.clone()),
+            &MilestoneSubmittedEvent {
+                job_id: job_id.clone(),
+                milestone_index,
+            },
+        );
 
         env.storage()
             .persistent()
@@ -316,6 +362,15 @@ impl MilestoneManagerContract {
         let mut milestone_paid = jm.milestones.get(idx).unwrap();
         milestone_paid.status = MilestoneStatus::Paid;
         jm.milestones.set(idx, milestone_paid);
+
+        env.events().publish(
+            (Symbol::new(&env, "MilestoneApproved"), job_id.clone()),
+            &MilestoneApprovedEvent {
+                job_id: job_id.clone(),
+                milestone_index,
+                amount: milestone.amount,
+            },
+        );
 
         env.storage()
             .persistent()
