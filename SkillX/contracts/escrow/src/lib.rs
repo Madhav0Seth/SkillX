@@ -17,7 +17,9 @@ pub enum DataKey {
     JobBalance(BytesN<32>),
     /// The client (depositor) for a specific job.
     JobClient(BytesN<32>),
-    /// The authorised caller — must be JobManagerContract.
+    /// The authorised caller for payment releases — MilestoneManagerContract.
+    MilestoneManager,
+    /// The authorised caller for refunds — JobManagerContract.
     JobManager,
     /// The XLM token contract address (Stellar Asset Contract for XLM).
     TokenId,
@@ -38,11 +40,17 @@ impl EscrowContract {
 
     /// Must be called once immediately after deployment.
     ///
-    /// * `job_manager` – address of the deployed JobManagerContract.
-    ///   Only this address is allowed to call `release_payment` and `refund`.
-    /// * `token_id`    – address of the Stellar Asset Contract (SAC) for XLM,
-    ///   or any SEP-41 token used for payments.
-    pub fn initialize(env: Env, job_manager: Address, token_id: Address) {
+    /// * `job_manager`        – address of the deployed JobManagerContract
+    ///   (allowed to call `refund`).
+    /// * `milestone_manager`  – address of the deployed MilestoneManagerContract
+    ///   (allowed to call `release_payment`).
+    /// * `token_id`           – address of the Stellar Asset Contract (SAC) for XLM.
+    pub fn initialize(
+        env: Env,
+        job_manager: Address,
+        milestone_manager: Address,
+        token_id: Address,
+    ) {
         // Prevent re-initialisation.
         if env.storage().instance().has(&DataKey::JobManager) {
             panic!("already initialised");
@@ -50,6 +58,9 @@ impl EscrowContract {
         env.storage()
             .instance()
             .set(&DataKey::JobManager, &job_manager);
+        env.storage()
+            .instance()
+            .set(&DataKey::MilestoneManager, &milestone_manager);
         env.storage()
             .instance()
             .set(&DataKey::TokenId, &token_id);
@@ -116,8 +127,8 @@ impl EscrowContract {
     ///
     /// Rules
     /// ─────
-    /// • Only the JobManagerContract may call this function.
-    /// • `amount` must not exceed the remaining balance (prevents over-payment).
+    /// • Only the MilestoneManagerContract may call this function.
+    /// • `amount` must not exceed the remaining balance.
     /// • Panics if the job has no funded balance.
     pub fn release_payment(
         env: Env,
@@ -125,8 +136,8 @@ impl EscrowContract {
         freelancer: Address,
         amount: i128,
     ) {
-        // 1. Only JobManager is allowed.
-        Self::require_job_manager(&env);
+        // 1. Only MilestoneManager is allowed.
+        Self::require_milestone_manager(&env);
 
         // 2. Load current balance.
         let balance_key = DataKey::JobBalance(job_id.clone());
@@ -176,8 +187,7 @@ impl EscrowContract {
     /// Rules
     /// ─────
     /// • Only the JobManagerContract may call this function.
-    /// • The `client` address is verified against the recorded depositor to
-    ///   prevent funds being redirected to an arbitrary address.
+    /// • The `client` address is verified against the recorded depositor.
     /// • Clears all storage for the job (prevents double-refund).
     pub fn refund(env: Env, job_id: BytesN<32>, client: Address) {
         // 1. Only JobManager is allowed.
@@ -234,16 +244,24 @@ impl EscrowContract {
     //  Internal helpers
     // ─────────────────────────────────────────────────────
 
+    /// Panics unless the transaction invoker is the registered MilestoneManager.
+    fn require_milestone_manager(env: &Env) {
+        let mm: Address = env
+            .storage()
+            .instance()
+            .get(&DataKey::MilestoneManager)
+            .expect("not initialised");
+        mm.require_auth();
+    }
+
     /// Panics unless the transaction invoker is the registered JobManager.
     fn require_job_manager(env: &Env) {
-        let job_manager: Address = env
+        let jm: Address = env
             .storage()
             .instance()
             .get(&DataKey::JobManager)
             .expect("not initialised");
-        // `require_auth` checks that this address signed the current
-        // transaction (or authorised it through a sub-invocation).
-        job_manager.require_auth();
+        jm.require_auth();
     }
 }
 
@@ -266,7 +284,7 @@ mod tests {
         BytesN::from_array(env, &[1u8; 32])
     }
 
-    fn setup() -> (Env, Address, Address, Address, Address) {
+    fn setup() -> (Env, Address, Address, Address, Address, Address) {
         let env = Env::default();
         env.mock_all_auths();
 
@@ -279,23 +297,24 @@ mod tests {
         let escrow = EscrowContractClient::new(&env, &escrow_id);
 
         let job_manager = Address::generate(&env);
+        let milestone_manager = Address::generate(&env);
         let client_addr = Address::generate(&env);
 
         // Mint some tokens to client.
         let sac = StellarAssetClient::new(&env, &token_id);
-        sac.mint(&client_addr, &1_000_0000000i128); // 1 000 XLM in stroops
+        sac.mint(&client_addr, &1_000_0000000i128);
 
-        // Initialise escrow.
-        escrow.initialize(&job_manager, &token_id);
+        // Initialise escrow with both managers.
+        escrow.initialize(&job_manager, &milestone_manager, &token_id);
 
-        (env, escrow_id, token_id, job_manager, client_addr)
+        (env, escrow_id, token_id, job_manager, milestone_manager, client_addr)
     }
 
     // ── tests ──────────────────────────────────────────────
 
     #[test]
     fn test_deposit_and_balance() {
-        let (env, escrow_id, _, _, client_addr) = setup();
+        let (env, escrow_id, _, _, _, client_addr) = setup();
         let escrow = EscrowContractClient::new(&env, &escrow_id);
         let jid = job_id(&env);
 
@@ -305,7 +324,7 @@ mod tests {
 
     #[test]
     fn test_deposit_can_top_up_same_job() {
-        let (env, escrow_id, _, _, client_addr) = setup();
+        let (env, escrow_id, _, _, _, client_addr) = setup();
         let escrow = EscrowContractClient::new(&env, &escrow_id);
         let jid = job_id(&env);
 
@@ -318,7 +337,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "client mismatch")]
     fn test_deposit_rejects_different_client_top_up() {
-        let (env, escrow_id, _, _, client_addr) = setup();
+        let (env, escrow_id, _, _, _, client_addr) = setup();
         let escrow = EscrowContractClient::new(&env, &escrow_id);
         let other_client = Address::generate(&env);
         let jid = job_id(&env);
@@ -329,7 +348,7 @@ mod tests {
 
     #[test]
     fn test_release_payment() {
-        let (env, escrow_id, token_id, _job_manager, client_addr) = setup();
+        let (env, escrow_id, token_id, _, _, client_addr) = setup();
         let escrow = EscrowContractClient::new(&env, &escrow_id);
         let token = TokenClient::new(&env, &token_id);
         let freelancer = Address::generate(&env);
@@ -337,7 +356,7 @@ mod tests {
 
         escrow.deposit(&jid, &client_addr, &500_0000000i128);
 
-        // JobManager releases 200 XLM to freelancer.
+        // MilestoneManager releases 200 XLM to freelancer.
         env.mock_all_auths();
         escrow.release_payment(&jid, &freelancer, &200_0000000i128);
 
@@ -348,7 +367,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "insufficient escrow balance")]
     fn test_release_over_balance_panics() {
-        let (env, escrow_id, _, _, client_addr) = setup();
+        let (env, escrow_id, _, _, _, client_addr) = setup();
         let escrow = EscrowContractClient::new(&env, &escrow_id);
         let freelancer = Address::generate(&env);
         let jid = job_id(&env);
@@ -359,7 +378,7 @@ mod tests {
 
     #[test]
     fn test_refund_returns_full_balance() {
-        let (env, escrow_id, token_id, _, client_addr) = setup();
+        let (env, escrow_id, token_id, _, _, client_addr) = setup();
         let escrow = EscrowContractClient::new(&env, &escrow_id);
         let token = TokenClient::new(&env, &token_id);
         let jid = job_id(&env);
@@ -375,7 +394,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "job not funded or already refunded")]
     fn test_double_refund_panics() {
-        let (env, escrow_id, _, _, client_addr) = setup();
+        let (env, escrow_id, _, _, _, client_addr) = setup();
         let escrow = EscrowContractClient::new(&env, &escrow_id);
         let jid = job_id(&env);
 

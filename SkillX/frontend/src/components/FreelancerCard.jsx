@@ -5,7 +5,19 @@ function shortAddress(value) {
   return `${value.slice(0, 8)}...${value.slice(-6)}`;
 }
 
+function formatValue(value) {
+  return Number(value || 0).toLocaleString(undefined, {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2
+  });
+}
+
 export default function FreelancerCard({ freelancer, onSelect }) {
+  const reputation = freelancer.reputation || {};
+  const completedJobs = Number(reputation.completed_jobs || 0);
+  const onTime = reputation.ontime_delivery_pct ?? null;
+  const settledValue = Number(reputation.total_value_settled || 0);
+
   return (
     <article className="card freelancer-card">
       <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginBottom: "1rem" }}>
@@ -26,6 +38,17 @@ export default function FreelancerCard({ freelancer, onSelect }) {
             </small>
           </div>
         </UserHoverCard>
+      </div>
+      <div className="reputation-badge" style={{ marginBottom: "0.9rem" }}>
+        <div className="reputation-badge-title">Reputation</div>
+        <div className="reputation-badge-metrics">
+          <span>{completedJobs} completed</span>
+          {onTime !== null && <span>{onTime}% on-time</span>}
+          {settledValue > 0 && <span>{formatValue(settledValue)} USDC</span>}
+        </div>
+        <div className="reputation-badge-caption">
+          {reputation.summary || (completedJobs > 0 ? "Verified activity" : "No completed jobs yet")}
+        </div>
       </div>
       <p style={{ margin: "0 0 1rem" }}>{freelancer.bio || "No bio yet"}</p>
       <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem", fontSize: "0.9rem", opacity: 0.85, marginBottom: "1rem" }}>

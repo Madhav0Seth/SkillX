@@ -464,29 +464,43 @@ export default function ClientDashboard() {
       try {
         const totalAmount = parsedMilestones.reduce((sum, m) => sum + m.amount, 0);
 
+        // Step 1: Create job on JobManager (no milestones)
         await contracts.createJobOnChain({
-          // Temporary mapping: use backend job_hash as deterministic on-chain job_id.
           jobIdHex: result.job.job_hash,
           jobHashHex: result.job.job_hash,
           clientAddress: address,
           totalAmount,
-          milestoneHashesHex: milestoneHashes,
-          milestonePercentages: parsedMilestones.map((m) => m.percentage),
-          milestoneDeadlines: parsedMilestones.map((m) => m.deadlineTs)
         });
 
+        // Step 2: Deposit escrow
         const txResult = await contracts.depositEscrowOnChain(
           result.job.job_hash,
           address,
           totalAmount
         );
+
+        // Step 3: Register milestones on MilestoneManager
+        // If there's a freelancer assigned, use their address; otherwise use a placeholder
+        // (milestones will be updated when freelancer accepts)
+        const freelancerAddr = normalizedFreelancerWallet || address;
+        await contracts.addMilestonesOnChain({
+          jobIdHex: result.job.job_hash,
+          clientAddress: address,
+          freelancerAddress: freelancerAddr,
+          totalAmount,
+          milestoneHashesHex: milestoneHashes,
+          milestonePercentages: parsedMilestones.map((m) => m.percentage),
+          milestoneDeadlines: parsedMilestones.map((m) => m.deadlineTs),
+        });
         
         setTxHash(txResult.hash);
-        setStatus(`Job created on-chain and escrow funded. DB Job ID: ${result.job.job_id}`);
+        setStatus(`Job created on-chain, escrow funded, and milestones registered. DB Job ID: ${result.job.job_id}`);
       } catch (contractError) {
         console.error("DETAILED CONTRACT ERROR:", contractError);
         const contractMessage = contractError.message.includes("VITE_JOB_MANAGER_CONTRACT_ID")
           ? "Job Manager contract ID is not configured."
+          : contractError.message.includes("VITE_MILESTONE_MANAGER_CONTRACT_ID")
+          ? "Milestone Manager contract ID is not configured."
           : contractError.message;
         setStatus(
           `Job created in database. On-chain setup incomplete: ${contractMessage}`

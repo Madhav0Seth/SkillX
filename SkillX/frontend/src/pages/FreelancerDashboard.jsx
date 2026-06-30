@@ -858,6 +858,21 @@ export default function FreelancerDashboard() {
                   paymentAmount={selectedJobCompleted ? formatPayment(selectedPaymentTotal) : undefined}
                 />
 
+                {job.freelancer?.reputation && (
+                  <div className="reputation-card" style={{ marginTop: "1rem" }}>
+                    <div className="reputation-card-header">
+                      <span className="reputation-badge-title">Client Reputation Snapshot</span>
+                      <span className="reputation-card-chip">{job.freelancer.reputation.tier || "New"}</span>
+                    </div>
+                    <div className="reputation-card-metrics">
+                      <span>{Number(job.freelancer.reputation.completed_jobs || 0)} completed</span>
+                      <span>{Number(job.freelancer.reputation.ontime_delivery_pct || 0)}% on-time</span>
+                      <span>{formatPayment(job.freelancer.reputation.total_value_settled || 0)} USDC</span>
+                    </div>
+                    <small className="reputation-badge-caption">{job.freelancer.reputation.summary || "Verified delivery history"}</small>
+                  </div>
+                )}
+
                 {selectedJobCompleted && (
                   <div className="payment-summary">
                     <span className="status-pill status-pill-completed">Payment received</span>

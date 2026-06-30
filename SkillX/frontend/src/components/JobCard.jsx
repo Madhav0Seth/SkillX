@@ -5,6 +5,13 @@ function shortAddress(value) {
   return `${value.slice(0, 8)}...${value.slice(-6)}`;
 }
 
+function formatValue(value) {
+  return Number(value || 0).toLocaleString(undefined, {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2
+  });
+}
+
 export default function JobCard({
   job,
   onAccept,
@@ -19,6 +26,7 @@ export default function JobCard({
   const isAssigned = Boolean(job.freelancer_wallet);
   const label = statusLabel || (isAssigned ? "Assigned" : "Open");
   const tone = statusTone === "default" ? (isAssigned ? "assigned" : "open") : statusTone;
+  const reputation = job.freelancer?.reputation || job.client?.reputation || null;
 
   return (
     <article className={`card job-card job-card-${variant} ${isSelected ? "card-selected" : ""}`}>
@@ -29,6 +37,18 @@ export default function JobCard({
         </span>
       </div>
       <p>{job.description}</p>
+
+      {reputation && (
+        <div className="reputation-badge" style={{ marginBottom: "0.8rem" }}>
+          <div className="reputation-badge-title">Freelancer Reputation</div>
+          <div className="reputation-badge-metrics">
+            <span>{Number(reputation.completed_jobs || 0)} completed</span>
+            <span>{Number(reputation.ontime_delivery_pct || 0)}% on-time</span>
+            <span>{formatValue(reputation.total_value_settled || 0)} USDC</span>
+          </div>
+          <div className="reputation-badge-caption">{reputation.summary || "Verified delivery history"}</div>
+        </div>
+      )}
       
       <div className="job-meta">
         <div className="job-meta-item">

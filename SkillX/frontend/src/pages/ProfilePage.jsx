@@ -175,6 +175,7 @@ export default function ProfilePage() {
   }, [walletAddress]);
 
   const skills = profile?.skills || [];
+  const reputation = stats?.reputation || profile?.reputation || null;
 
   return (
     <div className="profile-layout">
@@ -229,6 +230,20 @@ export default function ProfilePage() {
                   "No portfolio added yet."
                 )}
               </p>
+              {reputation && (
+                <div className="reputation-card" style={{ marginTop: "1rem" }}>
+                  <div className="reputation-card-header">
+                    <span className="reputation-badge-title">Reputation</span>
+                    <span className="reputation-card-chip">{reputation.tier || "New"}</span>
+                  </div>
+                  <div className="reputation-card-metrics">
+                    <span>{Number(reputation.completed_jobs || 0)} completed</span>
+                    <span>{Number(reputation.ontime_delivery_pct || 0)}% on-time</span>
+                    <span>{formatValue(reputation.total_value_settled || 0)} USDC</span>
+                  </div>
+                  <small className="reputation-badge-caption">{reputation.summary || "No completed jobs yet"}</small>
+                </div>
+              )}
               <div className="pill-row" style={{ marginTop: "1rem" }}>
                 {skills.length > 0 ? (
                   skills.map((skill) => (

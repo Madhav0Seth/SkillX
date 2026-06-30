@@ -1,5 +1,5 @@
 [package]
-name    = "job-manager-contract"
+name = "reputation-contract"
 version = "0.1.0"
 edition = "2021"
 
@@ -11,5 +11,3 @@ soroban-sdk = { workspace = true, features = ["alloc"] }
 
 [dev-dependencies]
 soroban-sdk = { workspace = true, features = ["testutils"] }
-escrow-contract = { path = "../escrow" }
-milestone-manager-contract = { path = "../milestone_manager" }

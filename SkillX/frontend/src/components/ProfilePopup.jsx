@@ -131,6 +131,21 @@ export default function ProfilePopup({ walletAddress, onClose }) {
               </div>
             )}
 
+            {stats?.reputation && (
+              <div className="reputation-card" style={{ marginBottom: "1rem" }}>
+                <div className="reputation-card-header">
+                  <span className="reputation-badge-title">Reputation</span>
+                  <span className="reputation-card-chip">{stats.reputation.tier || "New"}</span>
+                </div>
+                <div className="reputation-card-metrics">
+                  <span>{Number(stats.reputation.completed_jobs || 0)} completed</span>
+                  <span>{Number(stats.reputation.ontime_delivery_pct || 0)}% on-time</span>
+                  <span>{formatValue(stats.reputation.total_value_settled || 0)} USDC</span>
+                </div>
+                <small className="reputation-badge-caption">{stats.reputation.summary || "No completed jobs yet"}</small>
+              </div>
+            )}
+
             {/* Skills */}
             {skills.length > 0 && (
               <div className="profile-popup-skills">

@@ -16,6 +16,7 @@ const networkPassphrase =
   import.meta.env.VITE_NETWORK_PASSPHRASE || Networks.TESTNET;
 const jobManagerContractId = import.meta.env.VITE_JOB_MANAGER_CONTRACT_ID;
 const escrowContractId = import.meta.env.VITE_ESCROW_CONTRACT_ID;
+const milestoneManagerContractId = import.meta.env.VITE_MILESTONE_MANAGER_CONTRACT_ID;
 
 function getServer() {
   if (!rpcUrl) {
@@ -222,14 +223,19 @@ export const contracts = {
   ensureEscrowConfigured() {
     ensureContractId(escrowContractId, "VITE_ESCROW_CONTRACT_ID");
   },
+  ensureMilestoneManagerConfigured() {
+    ensureContractId(milestoneManagerContractId, "VITE_MILESTONE_MANAGER_CONTRACT_ID");
+  },
+
+  // ═══════════════════════════════════════════════════════════
+  //  JOB MANAGER — create, accept, complete, cancel, view
+  // ═══════════════════════════════════════════════════════════
+
   async createJobOnChain({
     jobIdHex,
     jobHashHex,
     clientAddress,
     totalAmount,
-    milestoneHashesHex,
-    milestonePercentages,
-    milestoneDeadlines
   }) {
     ensureStellarAddress(clientAddress);
     const args = [
@@ -237,13 +243,6 @@ export const contracts = {
       hexToBytesScVal(jobHashHex),
       Address.fromString(clientAddress).toScVal(),
       nativeToScVal(totalAmount, { type: "i128" }),
-      xdr.ScVal.scvVec((milestoneHashesHex || []).map((h) => hexToBytesScVal(h))),
-      xdr.ScVal.scvVec(
-        (milestonePercentages || []).map((p) => nativeToScVal(p, { type: "u32" }))
-      ),
-      xdr.ScVal.scvVec(
-        (milestoneDeadlines || []).map((d) => nativeToScVal(d, { type: "u64" }))
-      )
     ];
     return buildAndSendContractTx(
       jobManagerContractId,
@@ -253,6 +252,7 @@ export const contracts = {
       { expectedSigner: clientAddress }
     );
   },
+
   async acceptJobOnChain(jobIdHex, freelancerAddress) {
     ensureStellarAddress(freelancerAddress);
     const args = [
@@ -267,32 +267,140 @@ export const contracts = {
       { expectedSigner: freelancerAddress }
     );
   },
+
+  async completeJobOnChain(jobIdHex, clientAddress) {
+    const args = [hexToBytesScVal(jobIdHex)];
+    return buildAndSendContractTx(
+      jobManagerContractId,
+      "VITE_JOB_MANAGER_CONTRACT_ID",
+      "complete_job",
+      args,
+      clientAddress ? { expectedSigner: clientAddress } : {}
+    );
+  },
+
+  async getJobOnChain(jobIdHex) {
+    const args = [hexToBytesScVal(jobIdHex)];
+    return simulateContractCall(
+      jobManagerContractId,
+      "VITE_JOB_MANAGER_CONTRACT_ID",
+      "get_job",
+      args
+    );
+  },
+
+  async getJobStatusOnChain(jobIdHex) {
+    const args = [hexToBytesScVal(jobIdHex)];
+    return simulateContractCall(
+      jobManagerContractId,
+      "VITE_JOB_MANAGER_CONTRACT_ID",
+      "get_job_status",
+      args
+    );
+  },
+
+  // ═══════════════════════════════════════════════════════════
+  //  MILESTONE MANAGER — add, submit, approve, view
+  // ═══════════════════════════════════════════════════════════
+
+  async addMilestonesOnChain({
+    jobIdHex,
+    clientAddress,
+    freelancerAddress,
+    totalAmount,
+    milestoneHashesHex,
+    milestonePercentages,
+    milestoneDeadlines,
+  }) {
+    ensureStellarAddress(clientAddress);
+    ensureStellarAddress(freelancerAddress);
+    const args = [
+      hexToBytesScVal(jobIdHex),
+      Address.fromString(clientAddress).toScVal(),
+      Address.fromString(freelancerAddress).toScVal(),
+      nativeToScVal(totalAmount, { type: "i128" }),
+      xdr.ScVal.scvVec((milestoneHashesHex || []).map((h) => hexToBytesScVal(h))),
+      xdr.ScVal.scvVec(
+        (milestonePercentages || []).map((p) => nativeToScVal(p, { type: "u32" }))
+      ),
+      xdr.ScVal.scvVec(
+        (milestoneDeadlines || []).map((d) => nativeToScVal(d, { type: "u64" }))
+      ),
+    ];
+    return buildAndSendContractTx(
+      milestoneManagerContractId,
+      "VITE_MILESTONE_MANAGER_CONTRACT_ID",
+      "add_milestones",
+      args,
+      { expectedSigner: clientAddress }
+    );
+  },
+
   async submitMilestoneOnChain(jobIdHex, milestoneIndex, freelancerAddress) {
     const args = [
       hexToBytesScVal(jobIdHex),
       nativeToScVal(milestoneIndex, { type: "u32" })
     ];
     return buildAndSendContractTx(
-      jobManagerContractId,
-      "VITE_JOB_MANAGER_CONTRACT_ID",
+      milestoneManagerContractId,
+      "VITE_MILESTONE_MANAGER_CONTRACT_ID",
       "submit_milestone",
       args,
       freelancerAddress ? { expectedSigner: freelancerAddress } : {}
     );
   },
+
   async approveMilestoneOnChain(jobIdHex, milestoneIndex, clientAddress) {
     const args = [
       hexToBytesScVal(jobIdHex),
       nativeToScVal(milestoneIndex, { type: "u32" })
     ];
     return buildAndSendContractTx(
-      jobManagerContractId,
-      "VITE_JOB_MANAGER_CONTRACT_ID",
+      milestoneManagerContractId,
+      "VITE_MILESTONE_MANAGER_CONTRACT_ID",
       "approve_milestone",
       args,
       clientAddress ? { expectedSigner: clientAddress } : {}
     );
   },
+
+  async getMilestoneOnChain(jobIdHex, milestoneIndex) {
+    const args = [
+      hexToBytesScVal(jobIdHex),
+      nativeToScVal(milestoneIndex, { type: "u32" })
+    ];
+    return simulateContractCall(
+      milestoneManagerContractId,
+      "VITE_MILESTONE_MANAGER_CONTRACT_ID",
+      "get_milestone",
+      args
+    );
+  },
+
+  async getMilestonesOnChain(jobIdHex) {
+    const args = [hexToBytesScVal(jobIdHex)];
+    return simulateContractCall(
+      milestoneManagerContractId,
+      "VITE_MILESTONE_MANAGER_CONTRACT_ID",
+      "get_milestones",
+      args
+    );
+  },
+
+  async allMilestonesPaidOnChain(jobIdHex) {
+    const args = [hexToBytesScVal(jobIdHex)];
+    return simulateContractCall(
+      milestoneManagerContractId,
+      "VITE_MILESTONE_MANAGER_CONTRACT_ID",
+      "all_milestones_paid",
+      args
+    );
+  },
+
+  // ═══════════════════════════════════════════════════════════
+  //  ESCROW — deposit, balance
+  // ═══════════════════════════════════════════════════════════
+
   async depositEscrowOnChain(jobIdHex, clientAddress, amount) {
     ensureStellarAddress(clientAddress);
     const args = [
@@ -308,6 +416,7 @@ export const contracts = {
       { expectedSigner: clientAddress }
     );
   },
+
   async getEscrowBalanceOnChain(jobIdHex) {
     const args = [hexToBytesScVal(jobIdHex)];
     return simulateContractCall(
@@ -317,34 +426,4 @@ export const contracts = {
       args
     );
   },
-  async getMilestoneOnChain(jobIdHex, milestoneIndex) {
-    const args = [
-      hexToBytesScVal(jobIdHex),
-      nativeToScVal(milestoneIndex, { type: "u32" })
-    ];
-    return simulateContractCall(
-      jobManagerContractId,
-      "VITE_JOB_MANAGER_CONTRACT_ID",
-      "get_milestone",
-      args
-    );
-  },
-  async getJobOnChain(jobIdHex) {
-    const args = [hexToBytesScVal(jobIdHex)];
-    return simulateContractCall(
-      jobManagerContractId,
-      "VITE_JOB_MANAGER_CONTRACT_ID",
-      "get_job",
-      args
-    );
-  },
-  async getJobStatusOnChain(jobIdHex) {
-    const args = [hexToBytesScVal(jobIdHex)];
-    return simulateContractCall(
-      jobManagerContractId,
-      "VITE_JOB_MANAGER_CONTRACT_ID",
-      "get_job_status",
-      args
-    );
-  }
 };
