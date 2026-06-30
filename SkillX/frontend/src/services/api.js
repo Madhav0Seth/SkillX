@@ -118,5 +118,8 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ client_wallet })
     });
+  },
+  getProfileStats(walletAddress) {
+    return request(`/profile/${encodeURIComponent(walletAddress)}/stats`);
   }
 };

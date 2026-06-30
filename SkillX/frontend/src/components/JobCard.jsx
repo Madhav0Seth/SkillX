@@ -1,3 +1,5 @@
+import UserHoverCard from "./UserHoverCard";
+
 function shortAddress(value) {
   if (!value) return "Open";
   return `${value.slice(0, 8)}...${value.slice(-6)}`;
@@ -35,26 +37,30 @@ export default function JobCard({
         
         <div className="job-meta-item">
           <strong>Client:</strong>
-          <div className="avatar-image-circle" style={{ width: "20px", height: "20px", borderWidth: "1.5px" }}>
-            {job.client?.avatar_url ? (
-              <img src={job.client.avatar_url} alt="Client Avatar" />
-            ) : (
-              <span style={{ fontSize: "0.6rem", opacity: 0.5 }}>👤</span>
-            )}
-          </div>
-          <span style={{ fontWeight: 600 }}>{job.client?.name || shortAddress(job.client_wallet)}</span>
+          <UserHoverCard walletAddress={job.client_wallet} name={job.client?.name} avatarUrl={job.client?.avatar_url}>
+            <div className="avatar-image-circle" style={{ width: "20px", height: "20px", borderWidth: "1.5px" }}>
+              {job.client?.avatar_url ? (
+                <img src={job.client.avatar_url} alt="Client Avatar" />
+              ) : (
+                <span style={{ fontSize: "0.6rem", opacity: 0.5 }}>👤</span>
+              )}
+            </div>
+            <span style={{ fontWeight: 600 }}>{job.client?.name || shortAddress(job.client_wallet)}</span>
+          </UserHoverCard>
         </div>
 
         <div className="job-meta-item">
           <strong>Freelancer:</strong>
-          <div className="avatar-image-circle" style={{ width: "20px", height: "20px", borderWidth: "1.5px" }}>
-            {job.freelancer?.avatar_url ? (
-              <img src={job.freelancer.avatar_url} alt="Freelancer Avatar" />
-            ) : (
-              <span style={{ fontSize: "0.6rem", opacity: 0.5 }}>👤</span>
-            )}
-          </div>
-          <span style={{ fontWeight: 600 }}>{job.freelancer?.name || shortAddress(job.freelancer_wallet)}</span>
+          <UserHoverCard walletAddress={job.freelancer_wallet} name={job.freelancer?.name} avatarUrl={job.freelancer?.avatar_url}>
+            <div className="avatar-image-circle" style={{ width: "20px", height: "20px", borderWidth: "1.5px" }}>
+              {job.freelancer?.avatar_url ? (
+                <img src={job.freelancer.avatar_url} alt="Freelancer Avatar" />
+              ) : (
+                <span style={{ fontSize: "0.6rem", opacity: 0.5 }}>👤</span>
+              )}
+            </div>
+            <span style={{ fontWeight: 600 }}>{job.freelancer?.name || shortAddress(job.freelancer_wallet)}</span>
+          </UserHoverCard>
         </div>
 
         {paymentAmount != null && (

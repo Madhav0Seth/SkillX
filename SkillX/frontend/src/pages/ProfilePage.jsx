@@ -36,6 +36,58 @@ function formatXlm(value) {
   });
 }
 
+function formatValue(value) {
+  return Number(value || 0).toLocaleString(undefined, {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2
+  });
+}
+
+const JobsIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="stat-svg-icon">
+    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+    <rect x="8" y="2" width="8" height="4" rx="1" ry="1" fill="currentColor" opacity="0.1" />
+    <path d="m9 14 2 2 4-4" />
+  </svg>
+);
+
+const ValueIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="stat-svg-icon">
+    <circle cx="12" cy="12" r="8" fill="currentColor" opacity="0.1" />
+    <line x1="12" y1="8" x2="12" y2="16" />
+    <path d="M14.25 9.75a1.5 1.5 0 0 0-1.5-1.5h-1.5a1.5 1.5 0 0 0 0 3h1.5a1.5 1.5 0 0 1 0 3h-1.5a1.5 1.5 0 0 1-1.5-1.5" />
+  </svg>
+);
+
+const EscrowIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="stat-svg-icon">
+    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" fill="currentColor" opacity="0.1" />
+    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+  </svg>
+);
+
+const ClockIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="stat-svg-icon">
+    <circle cx="12" cy="12" r="10" fill="currentColor" opacity="0.1" />
+    <polyline points="12 6 12 12 16 14" />
+  </svg>
+);
+
+const FlagIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="stat-svg-icon">
+    <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" fill="currentColor" opacity="0.1" />
+    <line x1="4" y1="22" x2="4" y2="15" />
+  </svg>
+);
+
+const STAT_CONFIG = [
+  { key: "jobs_completed",      label: "Jobs Completed",       icon: <JobsIcon />, color: "var(--crayon-blue)" },
+  { key: "total_value_settled",  label: "Total Value Settled",  icon: <ValueIcon />, color: "var(--crayon-green)", suffix: " USDC" },
+  { key: "escrows_completed",    label: "Escrows Completed",    icon: <EscrowIcon />, color: "var(--crayon-purple)" },
+  { key: "ontime_delivery_pct",  label: "On-time Delivery",     icon: <ClockIcon />, color: "var(--crayon-orange)", suffix: "%" },
+  { key: "milestones_completed", label: "Milestones Completed", icon: <FlagIcon />, color: "var(--crayon-pink)" },
+];
+
 export default function ProfilePage() {
   const { address, profile } = useWallet();
   const walletAddress = normalizeWallet(address);
@@ -45,6 +97,8 @@ export default function ProfilePage() {
   const [balanceStatus, setBalanceStatus] = useState("");
   const [balanceLoading, setBalanceLoading] = useState(false);
   const [status, setStatus] = useState("");
+  const [stats, setStats] = useState(null);
+  const [statsLoading, setStatsLoading] = useState(false);
 
   const loadBalance = async () => {
     if (!walletAddress) {
@@ -73,6 +127,7 @@ export default function ProfilePage() {
       setFreelancerJobs([]);
       setXlmBalance("");
       setBalanceStatus("");
+      setStats(null);
 
       if (!walletAddress) {
         setStatus("Connect wallet to view your profile.");
@@ -85,6 +140,17 @@ export default function ProfilePage() {
         setXlmBalance(balance);
       } catch (error) {
         setBalanceStatus(error.message);
+      }
+
+      // Fetch stats
+      try {
+        setStatsLoading(true);
+        const result = await api.getProfileStats(walletAddress);
+        setStats(result.stats || null);
+      } catch (error) {
+        console.warn("Could not load stats:", error.message);
+      } finally {
+        setStatsLoading(false);
       }
 
       try {
@@ -111,106 +177,142 @@ export default function ProfilePage() {
   const skills = profile?.skills || [];
 
   return (
-    <section>
-      <h2>Profile</h2>
-      <div className="card balance-card">
-        <div className="section-heading">
-          <h3>Testnet XLM Balance</h3>
-          <button className="ghost" onClick={loadBalance} disabled={balanceLoading}>
-            {balanceLoading ? "Refreshing..." : "Refresh"}
-          </button>
-        </div>
-        <strong className="balance-amount">
-          {xlmBalance ? `${formatXlm(xlmBalance)} XLM` : "-- XLM"}
-        </strong>
-        <small>Connected wallet: {address || "Connect wallet"}</small>
-        {balanceStatus && <small className="inline-muted">{balanceStatus}</small>}
-      </div>
-
-      <div className="card">
-        <div style={{ display: "flex", alignItems: "center", gap: "1.5rem", marginBottom: "1.5rem" }}>
-          <div className="avatar-preview-lg" style={{ width: "85px", height: "85px", margin: 0 }}>
-            {profile?.avatar_url ? (
-              <img src={profile.avatar_url} alt="Profile" />
-            ) : (
-              <span className="avatar-preview-placeholder" style={{ fontSize: "2.4rem" }}>👤</span>
-            )}
+    <div className="profile-layout">
+      {/* Sidebar: Profile and Balance Info */}
+      <aside className="profile-sidebar">
+        <div className="card balance-card">
+          <div className="section-heading">
+            <h3>Testnet XLM Balance</h3>
+            <button className="ghost" onClick={loadBalance} disabled={balanceLoading}>
+              {balanceLoading ? "Refreshing..." : "Refresh"}
+            </button>
           </div>
-          <div>
-            <h3 style={{ margin: 0, fontSize: "1.4rem" }}>
-              {profile?.name || (profile?.role ? profile.role.toUpperCase() : "NO PROFILE")}
-            </h3>
-            <small style={{ opacity: 0.75, wordBreak: "break-all" }}>
-              {profile?.role ? `${profile.role.toUpperCase()} • ` : ""}{address || "Connect wallet"}
-            </small>
-          </div>
+          <strong className="balance-amount">
+            {xlmBalance ? `${formatXlm(xlmBalance)} XLM` : "-- XLM"}
+          </strong>
+          <small style={{ wordBreak: "break-all" }}>Connected: {address || "Connect wallet"}</small>
+          {balanceStatus && <small className="inline-muted" style={{ wordBreak: "break-all" }}>{balanceStatus}</small>}
         </div>
 
-        {profile ? (
-          <>
-            <p>
-              <strong>Bio:</strong> {profile.bio || "No bio added yet."}
-            </p>
-            <p>
-              <strong>Portfolio:</strong>{" "}
-              {profile.portfolio ? (
-                <a href={profile.portfolio} target="_blank" rel="noreferrer">
-                  {profile.portfolio}
-                </a>
+        <div className="card profile-info-card">
+          <div style={{ display: "flex", alignItems: "center", gap: "1.2rem", marginBottom: "1.2rem" }}>
+            <div className="avatar-preview-lg" style={{ width: "65px", height: "65px", margin: 0 }}>
+              {profile?.avatar_url ? (
+                <img src={profile.avatar_url} alt="Profile" />
               ) : (
-                "No portfolio added yet."
-              )}
-            </p>
-            <div className="pill-row">
-              {skills.length > 0 ? (
-                skills.map((skill) => (
-                  <span className="status-pill" key={skill}>
-                    {skill}
-                  </span>
-                ))
-              ) : (
-                <span className="status-pill">No skills listed</span>
+                <span className="avatar-preview-placeholder" style={{ fontSize: "2rem" }}>👤</span>
               )}
             </div>
-          </>
-        ) : (
-          <p><Link to="/role">Set up your profile</Link> to get started on SkillX.</p>
-        )}
-      </div>
-
-      <div className="dashboard-section">
-        <div className="section-heading">
-          <h3>Jobs Assigned to Me</h3>
-          <span>{freelancerJobs.length} jobs</span>
-        </div>
-        {freelancerJobs.length > 0 ? (
-          <div className="grid-cards">
-            {freelancerJobs.map((job) => (
-              <JobCard key={job.job_id} job={job} variant="assigned" />
-            ))}
+            <div>
+              <h3 style={{ margin: 0, fontSize: "1.2rem" }}>
+                {profile?.name || (profile?.role ? profile.role.toUpperCase() : "NO PROFILE")}
+              </h3>
+              <small style={{ opacity: 0.75, wordBreak: "break-all", fontSize: "0.8rem" }}>
+                {profile?.role ? `${profile.role.toUpperCase()} • ` : ""}
+                {address ? `${address.slice(0, 6)}...${address.slice(-6)}` : "Connect wallet"}
+              </small>
+            </div>
           </div>
-        ) : (
-          <p className="empty-state">No assigned freelancer jobs yet.</p>
-        )}
-      </div>
 
-      <div className="dashboard-section">
-        <div className="section-heading">
-          <h3>Jobs I Created</h3>
-          <span>{clientJobs.length} jobs</span>
+          {profile ? (
+            <>
+              <p style={{ margin: "0.5rem 0", fontSize: "0.95rem" }}>
+                <strong>Bio:</strong> {profile.bio || "No bio added yet."}
+              </p>
+              <p style={{ margin: "0.5rem 0", fontSize: "0.95rem" }}>
+                <strong>Portfolio:</strong>{" "}
+                {profile.portfolio ? (
+                  <a href={profile.portfolio} target="_blank" rel="noreferrer" style={{ wordBreak: "break-all" }}>
+                    {profile.portfolio}
+                  </a>
+                ) : (
+                  "No portfolio added yet."
+                )}
+              </p>
+              <div className="pill-row" style={{ marginTop: "1rem" }}>
+                {skills.length > 0 ? (
+                  skills.map((skill) => (
+                    <span className="status-pill" key={skill}>
+                      {skill}
+                    </span>
+                  ))
+                ) : (
+                  <span className="status-pill">No skills listed</span>
+                )}
+              </div>
+            </>
+          ) : (
+            <p><Link to="/role">Set up your profile</Link> to get started on SkillX.</p>
+          )}
         </div>
-        {clientJobs.length > 0 ? (
-          <div className="grid-cards">
-            {clientJobs.map((job) => (
-              <JobCard key={job.job_id} job={job} />
-            ))}
-          </div>
-        ) : (
-          <p className="empty-state">No client jobs created from this wallet yet.</p>
-        )}
-      </div>
+      </aside>
 
-      {status && <p className="status">{status}</p>}
-    </section>
+      {/* Main Content Area: Stats and Jobs */}
+      <main className="profile-main">
+        {/* ── Real Stats Grid ── */}
+        {walletAddress && (
+          <div className="profile-stats-card card">
+            <div className="section-heading">
+              <h3>Activity Overview</h3>
+              {statsLoading && <span className="stats-loading-indicator">Loading…</span>}
+            </div>
+            <div className="profile-stats-grid">
+              {STAT_CONFIG.map(({ key, label, icon, color, suffix }) => {
+                const value = stats ? stats[key] : null;
+                const displayValue = value !== null && value !== undefined
+                  ? key === "total_value_settled"
+                    ? formatValue(value)
+                    : String(value)
+                  : "--";
+                return (
+                  <div className="profile-stat-item" key={key} style={{ "--stat-accent": color }}>
+                    <span className="profile-stat-icon">{icon}</span>
+                    <span className="profile-stat-value">
+                      {displayValue}{value !== null && value !== undefined && suffix ? suffix : ""}
+                    </span>
+                    <span className="profile-stat-label">{label}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        <div className="dashboard-section">
+          <div className="section-heading">
+            <h3>Jobs Assigned to Me</h3>
+            <span>{freelancerJobs.length} jobs</span>
+          </div>
+          {freelancerJobs.length > 0 ? (
+            <div className="grid-cards">
+              {freelancerJobs.map((job) => (
+                <JobCard key={job.job_id} job={job} variant="assigned" />
+              ))}
+            </div>
+          ) : (
+            <p className="empty-state">No assigned freelancer jobs yet.</p>
+          )}
+        </div>
+
+        <div className="dashboard-section">
+          <div className="section-heading">
+            <h3>Jobs I Created</h3>
+            <span>{clientJobs.length} jobs</span>
+          </div>
+          {clientJobs.length > 0 ? (
+            <div className="grid-cards">
+              {clientJobs.map((job) => (
+                <JobCard key={job.job_id} job={job} />
+              ))}
+            </div>
+          ) : (
+            <p className="empty-state">No client jobs created from this wallet yet.</p>
+          )}
+        </div>
+      </main>
+
+      {status && <p className="status" style={{ gridColumn: "1 / -1" }}>{status}</p>}
+    </div>
   );
 }
+
