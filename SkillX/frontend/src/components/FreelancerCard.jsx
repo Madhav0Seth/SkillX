@@ -20,7 +20,7 @@ export default function FreelancerCard({ freelancer, onSelect }) {
 
   return (
     <article className="card freelancer-card">
-      <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginBottom: "1rem" }}>
+      <div className="freelancer-identity-row">
         <UserHoverCard walletAddress={freelancer.wallet_address} name={freelancer.name} avatarUrl={freelancer.avatar_url}>
           <div className="avatar-image-circle" style={{ width: "42px", height: "42px", borderWidth: "2px" }}>
             {freelancer.avatar_url ? (

@@ -239,8 +239,8 @@ export default function RolePage() {
                 <span className="avatar-preview-placeholder">👤</span>
               )}
             </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.5rem" }}>
+            <div className="avatar-input-panel">
+              <div className="avatar-url-row">
                 <input
                   type="text"
                   value={avatarUrl}
@@ -366,7 +366,7 @@ export default function RolePage() {
                   onChange={(e) => setZoom(Number(e.target.value))}
                 />
               </div>
-              <div style={{ display: "flex", gap: "1rem", width: "100%", marginTop: "0.5rem" }}>
+              <div className="cropper-action-row">
                 <button
                   type="button"
                   className="ghost"

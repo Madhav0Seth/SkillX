@@ -117,6 +117,43 @@ body {
   z-index: 50;
 }
 
+.topbar-brand {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: auto;
+}
+
+.hamburger-btn {
+  display: none;
+  background: transparent;
+  border: none;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 28px;
+  height: 20px;
+  cursor: pointer;
+  padding: 0;
+  position: relative;
+  z-index: 60;
+}
+
+.hamburger-line {
+  width: 100%;
+  height: 3px;
+  background-color: var(--text);
+  border-radius: 2px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.topbar-menu {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-grow: 1;
+  margin-left: 2rem;
+}
+
 .logo {
   text-decoration: none;
   font-family: 'Cabin Sketch', cursive;
@@ -886,15 +923,88 @@ select:focus {
 
 @media (max-width: 860px) {
   .topbar {
+    flex-direction: column;
+    align-items: stretch;
     padding: 1rem;
   }
 
-  .navlinks {
+  .topbar-brand {
+    width: 100%;
+    display: flex;
+  }
+
+  .hamburger-btn {
+    display: flex;
+  }
+
+  /* Hamburger to X transition */
+  .hamburger-btn[aria-expanded="true"] .hamburger-line:nth-child(1) {
+    transform: translateY(8px) rotate(45deg);
+  }
+  .hamburger-btn[aria-expanded="true"] .hamburger-line:nth-child(2) {
+    opacity: 0;
+  }
+  .hamburger-btn[aria-expanded="true"] .hamburger-line:nth-child(3) {
+    transform: translateY(-9px) rotate(-45deg);
+  }
+
+  .topbar-menu {
     display: none;
+    flex-direction: column;
+    gap: 1.5rem;
+    margin-left: 0;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 2px dashed var(--border);
+    width: 100%;
+  }
+
+  .topbar-menu.open {
+    display: flex;
+  }
+
+  .navlinks {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    gap: 0.8rem;
+  }
+
+  .navlinks a {
+    width: 100%;
+    text-align: center;
+    padding: 0.6rem;
+  }
+
+  .walletbox {
+    flex-direction: column;
+    width: 100%;
+    gap: 1rem;
+  }
+
+  .wallet-info {
+    flex-direction: column;
+    width: 100%;
+    gap: 0.5rem;
+  }
+
+  .wallet-pill,
+  .balance-pill {
+    width: 100%;
+    text-align: center;
+    box-sizing: border-box;
+  }
+
+  .walletbox button {
+    width: 100%;
   }
 
   .milestone-row {
     grid-template-columns: 1fr;
+  }
+
+  .milestone-header {
+    display: none;
   }
 
   .payment-row {
@@ -922,12 +1032,37 @@ select:focus {
   }
 
   .start-visual {
-    width: 500px;
-    height: 500px;
+    width: 100%;
+    max-width: 500px;
+    height: auto;
+    aspect-ratio: 1;
   }
 
   .card {
     transform: none !important;
+  }
+
+  /* Spacing adjustments on small screens */
+  .dashboard-section {
+    padding: 1.2rem;
+    box-shadow: 4px 4px 0px var(--border);
+  }
+
+  .grid-form {
+    padding: 1.2rem;
+  }
+
+  .avatar-preview-container {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .start-logo {
+    font-size: 4.2rem;
   }
 }
 
@@ -1981,5 +2116,563 @@ select:focus {
     width: 55px;
     height: 55px;
     min-width: 55px;
+  }
+}
+
+/* ==========================================================================
+   MOBILE RESPONSIVE POLISH
+   ========================================================================== */
+
+html {
+  overflow-x: hidden;
+}
+
+body {
+  overflow-x: hidden;
+}
+
+.app-shell {
+  overflow-x: clip;
+}
+
+.topbar {
+  gap: 1rem;
+}
+
+.topbar-brand {
+  flex-shrink: 0;
+}
+
+.topbar-menu,
+.walletbox,
+.wallet-info,
+.card,
+.dashboard-container,
+.dashboard-section,
+.workspace-card-section,
+.profile-layout,
+.profile-main,
+.job-detail-pane {
+  min-width: 0;
+}
+
+.navlinks {
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.wallet-pill {
+  max-width: 14rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.page-container {
+  width: min(100% - 3rem, 1100px);
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.hero,
+.grid-form,
+.dashboard-section,
+.workspace-card-section,
+.job-detail-pane,
+.card {
+  max-width: 100%;
+}
+
+.hero h1,
+.dashboard-header h2,
+.job-card h3,
+.freelancer-card h3,
+.section-heading h3,
+.card p,
+.profile-info-card p {
+  overflow-wrap: anywhere;
+}
+
+.grid-cards {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+}
+
+.row-actions {
+  align-items: center;
+}
+
+.row-actions > input,
+.row-actions > select {
+  flex: 1 1 220px;
+  min-width: 0;
+}
+
+button,
+.btn-link,
+input,
+textarea,
+select {
+  max-width: 100%;
+}
+
+input,
+textarea,
+select {
+  width: 100%;
+}
+
+textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
+.section-heading,
+.job-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+}
+
+.stacked-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+}
+
+.wallet-field-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 1rem;
+}
+
+.wallet-field-row label {
+  flex: 1 1 260px;
+  min-width: 0;
+  margin-bottom: 0;
+}
+
+.milestone-payment-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+  margin-top: 1.2rem;
+}
+
+.milestone-payment-row {
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.2rem 1.5rem;
+  border-width: 2px;
+  box-shadow: 3px 3px 0px var(--border);
+  margin: 0;
+}
+
+.milestone-payment-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.avatar-input-panel {
+  flex: 1;
+  min-width: 0;
+}
+
+.avatar-url-row,
+.cropper-action-row,
+.freelancer-identity-row {
+  display: flex;
+  gap: 1rem;
+  width: 100%;
+}
+
+.avatar-url-row {
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.cropper-action-row {
+  margin-top: 0.5rem;
+}
+
+.freelancer-identity-row {
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.pinned-gate-card {
+  max-height: min(86vh, 620px);
+}
+
+@media (max-width: 1020px) {
+  .topbar {
+    padding: 1rem 1.25rem;
+  }
+
+  .topbar-menu {
+    margin-left: 1rem;
+    gap: 1rem;
+  }
+
+  .navlinks {
+    gap: 0.75rem;
+  }
+
+  .navlinks a {
+    font-size: 1rem;
+    padding-inline: 0.5rem;
+  }
+
+  .walletbox {
+    gap: 0.6rem;
+  }
+
+  .balance-pill,
+  .wallet-pill {
+    padding-inline: 0.75rem;
+    font-size: 0.92rem;
+  }
+
+  .freelancer-workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .job-detail-pane {
+    position: static;
+    max-height: none;
+    transform: none !important;
+  }
+}
+
+@media (max-width: 860px) {
+  body {
+    font-size: 1rem;
+  }
+
+  .page-container {
+    width: min(100% - 2rem, 720px);
+    margin-top: 1.25rem;
+    padding-bottom: 2.5rem;
+  }
+
+  .topbar {
+    border-bottom-width: 2px;
+    box-shadow: 0 4px 0 rgba(0, 0, 0, 0.08);
+  }
+
+  .topbar-menu {
+    max-height: calc(100dvh - 96px);
+    overflow-y: auto;
+  }
+
+  .topbar-menu.open {
+    animation: mobileMenuIn 0.18s ease-out;
+  }
+
+  .navlinks a,
+  .walletbox button,
+  .wallet-pill,
+  .balance-pill {
+    min-height: 44px;
+  }
+
+  .wallet-info {
+    align-items: stretch;
+  }
+
+  .theme-toggle {
+    width: 48px !important;
+    min-height: 48px !important;
+    align-self: center;
+  }
+
+  .hero {
+    padding: 2rem 1.35rem;
+    margin-bottom: 1.75rem;
+    box-shadow: 4px 4px 0px var(--border);
+  }
+
+  .hero h1 {
+    font-size: clamp(2rem, 11vw, 2.6rem);
+  }
+
+  .hero p {
+    font-size: 1.08rem;
+  }
+
+  .grid-cards {
+    gap: 1.2rem;
+  }
+
+  .dashboard-container {
+    gap: 1.8rem;
+  }
+
+  .dashboard-header h2 {
+    font-size: clamp(2rem, 9vw, 2.45rem);
+  }
+
+  .dashboard-section,
+  .workspace-card-section,
+  .card,
+  .grid-form {
+    padding: 1.2rem;
+    box-shadow: 4px 4px 0px var(--border);
+  }
+
+  .card:hover,
+  .workspace-card-section:hover,
+  .empty-state-container:hover {
+    transform: none !important;
+  }
+
+  .grid-cards > .card,
+  .profile-stat-item,
+  .profile-stats-card,
+  .balance-card,
+  .grid-form {
+    transform: none !important;
+  }
+
+  .section-header,
+  .section-heading,
+  .job-card-header {
+    align-items: flex-start;
+  }
+
+  .section-header h3,
+  .section-heading h3 {
+    font-size: 1.35rem;
+  }
+
+  .row-actions,
+  .wallet-field-row,
+  .avatar-url-row,
+  .cropper-action-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .row-actions > *,
+  .wallet-field-row > *,
+  .avatar-url-row > *,
+  .cropper-action-row > *,
+  .job-card .row-actions button,
+  .job-card .row-actions .btn-link {
+    width: 100%;
+  }
+
+  .wallet-field-row button,
+  .avatar-url-row button {
+    height: auto !important;
+    min-height: 48px;
+    padding: 0.65rem 1rem !important;
+    white-space: normal !important;
+  }
+
+  .milestone-row {
+    gap: 0.7rem;
+    padding: 0.8rem;
+  }
+
+  .milestone-payment-row,
+  .payment-row {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .milestone-payment-row button,
+  .payment-row button {
+    width: 100%;
+  }
+
+  .payment-summary {
+    transform: none !important;
+  }
+
+  .payment-summary strong {
+    font-size: 1.75rem;
+  }
+
+  .empty-state-container {
+    padding: 2rem 1rem;
+  }
+
+  .profile-layout {
+    gap: 1.5rem;
+  }
+
+  .profile-sidebar {
+    gap: 1.2rem;
+  }
+
+  .profile-stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.8rem;
+  }
+
+  .profile-stat-item {
+    padding: 1rem 0.65rem;
+  }
+
+  .profile-stat-label {
+    font-size: 0.72rem;
+  }
+
+  .freelancer-identity-row .user-hover-trigger {
+    align-items: flex-start;
+    min-width: 0;
+  }
+
+  .start-gate,
+  .start-scroll-container {
+    width: 100%;
+  }
+
+  .pinned-gate-card {
+    width: min(100% - 2rem, 440px);
+    padding: 1.4rem;
+  }
+
+  .start-logo {
+    font-size: clamp(4rem, 18vw, 6rem);
+  }
+
+  .status-modal-overlay,
+  .cropper-modal-overlay,
+  .profile-popup-overlay {
+    padding: 1rem;
+    align-items: flex-start;
+    overflow-y: auto;
+  }
+
+  .status-modal-content,
+  .cropper-modal-content,
+  .profile-popup-content {
+    width: 100%;
+    margin: auto 0;
+    box-shadow: 5px 5px 0 rgba(0, 0, 0, 0.35);
+  }
+}
+
+@media (max-width: 520px) {
+  .page-container {
+    width: min(100% - 1.25rem, 480px);
+    margin-top: 1rem;
+  }
+
+  .topbar {
+    padding: 0.85rem;
+  }
+
+  .logo {
+    font-size: 1.9rem;
+  }
+
+  button,
+  .btn-link {
+    min-height: 46px;
+    padding: 0.6rem 1rem;
+    font-size: 0.98rem;
+    text-align: center;
+  }
+
+  .hero,
+  .dashboard-section,
+  .workspace-card-section,
+  .card,
+  .grid-form,
+  .job-detail-pane {
+    border-width: 2px;
+    padding: 1rem;
+    box-shadow: 3px 3px 0px var(--border);
+  }
+
+  .badge {
+    font-size: 0.78rem;
+    line-height: 1.3;
+  }
+
+  .grid-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-header {
+    padding-bottom: 1rem;
+  }
+
+  .dashboard-header .subtitle {
+    font-size: 0.98rem;
+  }
+
+  .section-badge {
+    font-size: 0.78rem;
+  }
+
+  .job-meta-item {
+    align-items: flex-start;
+    gap: 0.35rem;
+  }
+
+  .job-meta-item strong {
+    min-width: 64px;
+  }
+
+  .reputation-badge,
+  .reputation-card {
+    box-shadow: 2px 2px 0 var(--border);
+  }
+
+  .profile-stats-grid,
+  .profile-popup-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .avatar-selection-section {
+    padding: 1rem;
+  }
+
+  .avatar-presets-grid {
+    justify-content: center;
+  }
+
+  .crop-canvas-wrapper {
+    width: min(300px, calc(100vw - 4rem));
+    height: min(300px, calc(100vw - 4rem));
+  }
+
+  .crop-canvas-wrapper canvas {
+    width: 100%;
+    height: 100%;
+  }
+
+  .profile-popup-header {
+    align-items: flex-start;
+    padding-right: 2.5rem;
+  }
+
+  .profile-popup-content {
+    padding: 1.25rem;
+  }
+
+  .status-modal-content {
+    padding: 1.25rem;
+  }
+}
+
+@keyframes mobileMenuIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
