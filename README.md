@@ -11,7 +11,7 @@ SkillX is a decentralized freelance marketplace built on Stellar Testnet. Client
 | GitHub repository | [github.com/Madhav0Seth/SkillX](https://github.com/Madhav0Seth/SkillX) |
 | Live app | [skill-x-nu.vercel.app](https://skill-x-nu.vercel.app/) |
 | Backend API | [skillx-tqzb.onrender.com](https://skillx-tqzb.onrender.com) |
-| Demo video | [YouTube demo](https://youtu.be/GMjDWeJ5AYQ) |
+| Demo video | [YouTube demo](https://www.youtube.com/watch?v=SfhH32hAEAw) |
 
 ## Preview
 
