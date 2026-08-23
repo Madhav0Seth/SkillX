@@ -51,7 +51,7 @@ pub struct JobMilestones {
 }
 
 // ═══════════════════════════════════════════════════════════════
-//  STORAGE KEYS
+//  EVENT TYPES
 // ═══════════════════════════════════════════════════════════════
 
 #[contracttype]
@@ -78,6 +78,10 @@ pub struct MilestoneApprovedEvent {
     pub milestone_index: u32,
     pub amount: i128,
 }
+
+// ═══════════════════════════════════════════════════════════════
+//  STORAGE KEYS
+// ═══════════════════════════════════════════════════════════════
 
 #[contracttype]
 pub enum DataKey {
@@ -126,10 +130,6 @@ impl MilestoneManagerContract {
     // ───────────────────────────────────────────────────────────
 
     /// One-time setup. Must be called immediately after deployment.
-    ///
-    /// * `admin`           – address that can update contract configuration.
-    /// * `escrow_contract` – address of the already-deployed EscrowContract.
-    /// * `job_manager`     – address of the deployed JobManagerContract.
     pub fn initialize(
         env: Env,
         admin: Address,
@@ -150,24 +150,12 @@ impl MilestoneManagerContract {
     }
 
     // ───────────────────────────────────────────────────────────
-    //  ADD MILESTONES (called once per job, typically right
-    //  after create_job on JobManager)
+    //  ADD MILESTONES
     // ───────────────────────────────────────────────────────────
 
     /// Register milestones for a job.
     ///
-    /// Parameters
-    /// ──────────
-    /// * `job_id`               – must match a job created on JobManager.
-    /// * `client`               – the client's wallet (must sign).
-    /// * `freelancer`           – the freelancer's wallet (used for payout auth).
-    /// * `total_amount`         – total XLM in stroops locked in escrow.
-    /// * `milestone_hashes`     – sha256 of each off-chain milestone description.
-    /// * `milestone_percentages`– percentage allocation for each milestone.
-    /// * `milestone_deadlines`  – unix timestamp deadlines per milestone.
-    ///
-    /// Rules enforced on-chain
-    /// ───────────────────────
+    /// Rules enforced on-chain:
     /// • Sum of percentages must equal 100.
     /// • Each percentage must be > 0.
     /// • At least one milestone required.
@@ -183,15 +171,12 @@ impl MilestoneManagerContract {
         milestone_percentages: Vec<u32>,
         milestone_deadlines: Vec<u64>,
     ) {
-        // 1. Auth — client must sign
         client.require_auth();
 
-        // 2. Uniqueness — no double-registration
         if env.storage().persistent().has(&DataKey::Milestones(job_id.clone())) {
             panic!("milestones already registered for this job");
         }
 
-        // 3. Input sanity
         let n = milestone_hashes.len();
         if n == 0 {
             panic!("at least one milestone required");
@@ -203,35 +188,29 @@ impl MilestoneManagerContract {
             panic!("total_amount must be positive");
         }
 
-        // 4. Validate percentages sum to exactly 100
         let pct_sum: u32 = milestone_percentages.iter().sum();
         if pct_sum != 100 {
             panic!("milestone percentages must sum to 100");
         }
 
-        // 5. Build Milestone structs with derived amounts
         let mut milestones: Vec<Milestone> = Vec::new(&env);
         for i in 0..n {
             let pct = milestone_percentages.get(i).unwrap();
             if pct == 0 {
                 panic!("milestone percentage cannot be zero");
             }
-            let amount = (total_amount * pct as i128) / 100;
             milestones.push_back(Milestone {
                 hash: milestone_hashes.get(i).unwrap(),
                 percentage: pct,
-                amount,
+                amount: (total_amount * pct as i128) / 100,
                 deadline: milestone_deadlines.get(i).unwrap(),
                 status: MilestoneStatus::Pending,
             });
         }
 
-        // 6. Persist
-        let client_for_event = client.clone();
-        let freelancer_for_event = freelancer.clone();
         let job_milestones = JobMilestones {
-            client,
-            freelancer,
+            client: client.clone(),
+            freelancer: freelancer.clone(),
             total_amount,
             milestones,
         };
@@ -242,9 +221,9 @@ impl MilestoneManagerContract {
         env.events().publish(
             (Symbol::new(&env, "MilestoneCreated"), job_id.clone()),
             &MilestoneCreatedEvent {
-                job_id: job_id.clone(),
-                client: client_for_event,
-                freelancer: freelancer_for_event,
+                job_id,
+                client,
+                freelancer,
                 milestone_count: n as u32,
                 total_amount,
             },
@@ -257,16 +236,12 @@ impl MilestoneManagerContract {
 
     /// Freelancer signals that milestone `milestone_index` is ready for review.
     ///
-    /// Rules
-    /// ─────
+    /// Rules:
     /// • Only the registered freelancer may submit.
     /// • Milestone must be Pending.
-    /// • Milestones must be submitted in order (index N requires index N-1 to
-    ///   be Paid).
+    /// • Milestones must be submitted in order.
     pub fn submit_milestone(env: Env, job_id: BytesN<32>, milestone_index: u32) {
         let mut jm = Self::load_milestones(&env, &job_id);
-
-        // Auth: only the accepted freelancer
         jm.freelancer.require_auth();
 
         let idx = milestone_index as usize;
@@ -290,42 +265,35 @@ impl MilestoneManagerContract {
         milestone.status = MilestoneStatus::Submitted;
         jm.milestones.set(milestone_index, milestone);
 
+        env.storage()
+            .persistent()
+            .set(&DataKey::Milestones(job_id.clone()), &jm);
+
         env.events().publish(
             (Symbol::new(&env, "MilestoneSubmitted"), job_id.clone()),
             &MilestoneSubmittedEvent {
-                job_id: job_id.clone(),
+                job_id,
                 milestone_index,
             },
         );
-
-        env.storage()
-            .persistent()
-            .set(&DataKey::Milestones(job_id), &jm);
     }
 
     // ───────────────────────────────────────────────────────────
-    //  APPROVE MILESTONE  (triggers cross-contract payment)
+    //  APPROVE MILESTONE (triggers cross-contract payment)
     // ───────────────────────────────────────────────────────────
 
     /// Client approves submitted milestone work and triggers escrow payment.
     ///
-    /// Cross-contract call
-    /// ───────────────────
-    /// Calls `EscrowContract::release_payment(job_id, freelancer, amount)`.
+    /// Cross-contract: calls `EscrowContract::release_payment(job_id, freelancer, amount)`.
     ///
-    /// Rules
-    /// ─────
+    /// Rules:
     /// • Only the client may approve.
     /// • Milestone must be in Submitted status.
-    /// • Sets milestone → Approved, then immediately → Paid after escrow call.
     pub fn approve_milestone(env: Env, job_id: BytesN<32>, milestone_index: u32) {
         let mut jm = Self::load_milestones(&env, &job_id);
-
-        // Auth: only the client
         jm.client.require_auth();
 
-        let idx = milestone_index;
-        let mut milestone = jm.milestones.get(idx).unwrap_or_else(|| {
+        let milestone = jm.milestones.get(milestone_index).unwrap_or_else(|| {
             panic!("milestone index out of bounds")
         });
 
@@ -333,16 +301,10 @@ impl MilestoneManagerContract {
             panic!("milestone not in Submitted status");
         }
 
+        let payout_amount = milestone.amount;
         let freelancer = jm.freelancer.clone();
 
-        // Mark Approved first (before external call — fail-fast pattern)
-        milestone.status = MilestoneStatus::Approved;
-        jm.milestones.set(idx, milestone.clone());
-        env.storage()
-            .persistent()
-            .set(&DataKey::Milestones(job_id.clone()), &jm);
-
-        // ── CROSS-CONTRACT CALL ──────────────────────────────────
+        // Cross-contract: release payment from escrow
         let escrow_id: Address = env
             .storage()
             .instance()
@@ -354,31 +316,30 @@ impl MilestoneManagerContract {
             &escrow_id,
             &job_id,
             &freelancer,
-            milestone.amount,
+            payout_amount,
         );
-        // ────────────────────────────────────────────────────────
 
-        // Mark Paid after successful escrow call
-        let mut milestone_paid = jm.milestones.get(idx).unwrap();
-        milestone_paid.status = MilestoneStatus::Paid;
-        jm.milestones.set(idx, milestone_paid);
+        // Mark milestone as Paid (single write after successful escrow call)
+        let mut milestone_final = jm.milestones.get(milestone_index).unwrap();
+        milestone_final.status = MilestoneStatus::Paid;
+        jm.milestones.set(milestone_index, milestone_final);
+
+        env.storage()
+            .persistent()
+            .set(&DataKey::Milestones(job_id.clone()), &jm);
 
         env.events().publish(
             (Symbol::new(&env, "MilestoneApproved"), job_id.clone()),
             &MilestoneApprovedEvent {
-                job_id: job_id.clone(),
+                job_id,
                 milestone_index,
-                amount: milestone.amount,
+                amount: payout_amount,
             },
         );
-
-        env.storage()
-            .persistent()
-            .set(&DataKey::Milestones(job_id), &jm);
     }
 
     // ───────────────────────────────────────────────────────────
-    //  CHECK TIMEOUT  (auto-approve after deadline)
+    //  CHECK TIMEOUT (auto-approve after deadline)
     // ───────────────────────────────────────────────────────────
 
     /// Anyone may call this to trigger auto-approval if the milestone deadline
@@ -386,8 +347,7 @@ impl MilestoneManagerContract {
     pub fn check_timeout(env: Env, job_id: BytesN<32>, milestone_index: u32) {
         let mut jm = Self::load_milestones(&env, &job_id);
 
-        let idx = milestone_index;
-        let milestone = jm.milestones.get(idx).unwrap_or_else(|| {
+        let milestone = jm.milestones.get(milestone_index).unwrap_or_else(|| {
             panic!("milestone index out of bounds")
         });
 
@@ -395,22 +355,14 @@ impl MilestoneManagerContract {
             panic!("milestone not in Submitted status");
         }
 
-        let now = env.ledger().timestamp();
-        if now <= milestone.deadline {
+        if env.ledger().timestamp() <= milestone.deadline {
             panic!("deadline not yet reached");
         }
 
+        let payout_amount = milestone.amount;
         let freelancer = jm.freelancer.clone();
 
-        // Mark Approved
-        let mut m = milestone.clone();
-        m.status = MilestoneStatus::Approved;
-        jm.milestones.set(idx, m.clone());
-        env.storage()
-            .persistent()
-            .set(&DataKey::Milestones(job_id.clone()), &jm);
-
-        // Cross-contract payment
+        // Cross-contract: release payment from escrow
         let escrow_id: Address = env
             .storage()
             .instance()
@@ -422,13 +374,13 @@ impl MilestoneManagerContract {
             &escrow_id,
             &job_id,
             &freelancer,
-            m.amount,
+            payout_amount,
         );
 
-        // Mark Paid
-        let mut m_paid = jm.milestones.get(idx).unwrap();
-        m_paid.status = MilestoneStatus::Paid;
-        jm.milestones.set(idx, m_paid);
+        // Mark milestone as Paid (single write)
+        let mut milestone_final = jm.milestones.get(milestone_index).unwrap();
+        milestone_final.status = MilestoneStatus::Paid;
+        jm.milestones.set(milestone_index, milestone_final);
 
         env.storage()
             .persistent()
@@ -476,12 +428,7 @@ impl MilestoneManagerContract {
 
     /// Update the EscrowContract address (admin only).
     pub fn update_escrow(env: Env, new_escrow: Address) {
-        let admin: Address = env
-            .storage()
-            .instance()
-            .get(&DataKey::Admin)
-            .expect("not initialised");
-        admin.require_auth();
+        Self::require_admin(&env);
         env.storage()
             .instance()
             .set(&DataKey::EscrowContract, &new_escrow);
@@ -489,12 +436,7 @@ impl MilestoneManagerContract {
 
     /// Update the JobManager address (admin only).
     pub fn update_job_manager(env: Env, new_job_manager: Address) {
-        let admin: Address = env
-            .storage()
-            .instance()
-            .get(&DataKey::Admin)
-            .expect("not initialised");
-        admin.require_auth();
+        Self::require_admin(&env);
         env.storage()
             .instance()
             .set(&DataKey::JobManager, &new_job_manager);
@@ -518,6 +460,15 @@ impl MilestoneManagerContract {
             .get(&DataKey::JobManager)
             .expect("job manager not configured");
         jm.require_auth();
+    }
+
+    fn require_admin(env: &Env) {
+        let admin: Address = env
+            .storage()
+            .instance()
+            .get(&DataKey::Admin)
+            .expect("not initialised");
+        admin.require_auth();
     }
 }
 

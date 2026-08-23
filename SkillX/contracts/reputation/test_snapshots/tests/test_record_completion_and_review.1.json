@@ -350,18 +350,6 @@
                       "key": {
                         "vec": [
                           {
-                            "symbol": "EscrowContract"
-                          }
-                        ]
-                      },
-                      "val": {
-                        "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
-                      }
-                    },
-                    {
-                      "key": {
-                        "vec": [
-                          {
                             "symbol": "JobManager"
                           }
                         ]

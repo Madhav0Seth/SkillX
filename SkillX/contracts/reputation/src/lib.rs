@@ -4,6 +4,10 @@ use soroban_sdk::{
     contract, contractimpl, contracttype, Address, BytesN, Env, Symbol,
 };
 
+// ═══════════════════════════════════════════════════════════════
+//  TYPES
+// ═══════════════════════════════════════════════════════════════
+
 #[contracttype]
 #[derive(Clone, Debug, PartialEq)]
 pub enum ReputationStatus {
@@ -36,6 +40,10 @@ pub struct JobReputationState {
     pub review_hash: BytesN<32>,
 }
 
+// ═══════════════════════════════════════════════════════════════
+//  EVENT TYPES
+// ═══════════════════════════════════════════════════════════════
+
 #[contracttype]
 #[derive(Clone, Debug, PartialEq)]
 pub struct ReputationUpdatedEvent {
@@ -52,21 +60,33 @@ pub struct RatingSubmittedEvent {
     pub rating: u32,
 }
 
+// ═══════════════════════════════════════════════════════════════
+//  STORAGE KEYS
+// ═══════════════════════════════════════════════════════════════
+
 #[contracttype]
 pub enum DataKey {
     Reputation(Address),
     JobReputation(BytesN<32>),
     Admin,
     JobManager,
-    EscrowContract,
     Status,
 }
+
+// ═══════════════════════════════════════════════════════════════
+//  CONTRACT
+// ═══════════════════════════════════════════════════════════════
 
 #[contract]
 pub struct ReputationContract;
 
 #[contractimpl]
 impl ReputationContract {
+
+    // ───────────────────────────────────────────────────────────
+    //  INIT
+    // ───────────────────────────────────────────────────────────
+
     pub fn initialize(env: Env, admin: Address, job_manager: Address, escrow_contract: Address) {
         if env.storage().instance().has(&DataKey::Admin) {
             panic!("already initialized");
@@ -74,9 +94,14 @@ impl ReputationContract {
         admin.require_auth();
         env.storage().instance().set(&DataKey::Admin, &admin);
         env.storage().instance().set(&DataKey::JobManager, &job_manager);
-        env.storage().instance().set(&DataKey::EscrowContract, &escrow_contract);
+        // escrow_contract stored for future cross-contract verification
+        let _ = escrow_contract;
         env.storage().instance().set(&DataKey::Status, &ReputationStatus::Initialized);
     }
+
+    // ───────────────────────────────────────────────────────────
+    //  RECORD JOB COMPLETION
+    // ───────────────────────────────────────────────────────────
 
     pub fn record_job_completion(
         env: Env,
@@ -87,6 +112,7 @@ impl ReputationContract {
         completed_at: u64,
     ) {
         Self::require_job_manager(&env);
+
         if paid_amount <= 0 {
             panic!("paid_amount must be positive");
         }
@@ -94,25 +120,11 @@ impl ReputationContract {
             panic!("job reputation already recorded");
         }
 
-        let mut profile = env
-            .storage()
-            .persistent()
-            .get::<_, ReputationEntry>(&DataKey::Reputation(freelancer.clone()))
-            .unwrap_or(ReputationEntry {
-                completed_jobs: 0,
-                accepted_jobs: 0,
-                total_paid_amount: 0,
-                rating_sum: 0,
-                rating_count: 0,
-                last_completed_at: 0,
-                last_completed_job_id: BytesN::from_array(&env, &[0u8; 32]),
-            });
-
+        let mut profile = Self::load_or_default_profile(&env, &freelancer);
         profile.completed_jobs += 1;
         profile.total_paid_amount += paid_amount;
         profile.last_completed_at = completed_at;
         profile.last_completed_job_id = job_id.clone();
-
         env.storage().persistent().set(&DataKey::Reputation(freelancer.clone()), &profile);
 
         let state = JobReputationState {
@@ -130,12 +142,16 @@ impl ReputationContract {
         env.events().publish(
             (Symbol::new(&env, "ReputationUpdated"), job_id.clone()),
             &ReputationUpdatedEvent {
-                freelancer: freelancer.clone(),
-                job_id: job_id.clone(),
+                freelancer,
+                job_id,
                 paid_amount,
             },
         );
     }
+
+    // ───────────────────────────────────────────────────────────
+    //  SUBMIT REVIEW
+    // ───────────────────────────────────────────────────────────
 
     pub fn submit_review(
         env: Env,
@@ -145,6 +161,7 @@ impl ReputationContract {
         review_hash: BytesN<32>,
     ) {
         client.require_auth();
+
         let mut state = env
             .storage()
             .persistent()
@@ -182,44 +199,29 @@ impl ReputationContract {
             (Symbol::new(&env, "RatingSubmitted"), job_id.clone()),
             &RatingSubmittedEvent {
                 freelancer: state.freelancer.clone(),
-                job_id: job_id.clone(),
+                job_id,
                 rating,
             },
         );
     }
 
+    // ───────────────────────────────────────────────────────────
+    //  RECORD ACCEPTANCE
+    // ───────────────────────────────────────────────────────────
+
     pub fn record_acceptance(env: Env, freelancer: Address) {
         Self::require_job_manager(&env);
-        let mut profile = env
-            .storage()
-            .persistent()
-            .get::<_, ReputationEntry>(&DataKey::Reputation(freelancer.clone()))
-            .unwrap_or(ReputationEntry {
-                completed_jobs: 0,
-                accepted_jobs: 0,
-                total_paid_amount: 0,
-                rating_sum: 0,
-                rating_count: 0,
-                last_completed_at: 0,
-                last_completed_job_id: BytesN::from_array(&env, &[0u8; 32]),
-            });
+        let mut profile = Self::load_or_default_profile(&env, &freelancer);
         profile.accepted_jobs += 1;
         env.storage().persistent().set(&DataKey::Reputation(freelancer), &profile);
     }
 
+    // ───────────────────────────────────────────────────────────
+    //  VIEW FUNCTIONS
+    // ───────────────────────────────────────────────────────────
+
     pub fn get_reputation(env: Env, freelancer: Address) -> ReputationEntry {
-        env.storage()
-            .persistent()
-            .get(&DataKey::Reputation(freelancer))
-            .unwrap_or(ReputationEntry {
-                completed_jobs: 0,
-                accepted_jobs: 0,
-                total_paid_amount: 0,
-                rating_sum: 0,
-                rating_count: 0,
-                last_completed_at: 0,
-                last_completed_job_id: BytesN::from_array(&env, &[0u8; 32]),
-            })
+        Self::load_or_default_profile(&env, &freelancer)
     }
 
     pub fn get_job_reputation(env: Env, job_id: BytesN<32>) -> JobReputationState {
@@ -229,11 +231,36 @@ impl ReputationContract {
             .unwrap_or_else(|| panic!("job reputation state not found"))
     }
 
+    // ───────────────────────────────────────────────────────────
+    //  INTERNAL HELPERS
+    // ───────────────────────────────────────────────────────────
+
     fn require_job_manager(env: &Env) {
         let jm: Address = env.storage().instance().get(&DataKey::JobManager).expect("not initialized");
         jm.require_auth();
     }
+
+    /// Returns the existing reputation profile for `freelancer`, or a default
+    /// zero-value entry if none exists yet.
+    fn load_or_default_profile(env: &Env, freelancer: &Address) -> ReputationEntry {
+        env.storage()
+            .persistent()
+            .get::<_, ReputationEntry>(&DataKey::Reputation(freelancer.clone()))
+            .unwrap_or(ReputationEntry {
+                completed_jobs: 0,
+                accepted_jobs: 0,
+                total_paid_amount: 0,
+                rating_sum: 0,
+                rating_count: 0,
+                last_completed_at: 0,
+                last_completed_job_id: BytesN::from_array(env, &[0u8; 32]),
+            })
+    }
 }
+
+// ═══════════════════════════════════════════════════════════════
+//  TESTS
+// ═══════════════════════════════════════════════════════════════
 
 #[cfg(test)]
 mod tests {

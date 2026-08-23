@@ -11,12 +11,20 @@ import {
   xdr
 } from "@stellar/stellar-sdk";
 
+// ═══════════════════════════════════════════════════════════════
+//  Configuration
+// ═══════════════════════════════════════════════════════════════
+
 const rpcUrl = import.meta.env.VITE_SOROBAN_RPC_URL;
 const networkPassphrase =
   import.meta.env.VITE_NETWORK_PASSPHRASE || Networks.TESTNET;
 const jobManagerContractId = import.meta.env.VITE_JOB_MANAGER_CONTRACT_ID;
 const escrowContractId = import.meta.env.VITE_ESCROW_CONTRACT_ID;
 const milestoneManagerContractId = import.meta.env.VITE_MILESTONE_MANAGER_CONTRACT_ID;
+
+// ═══════════════════════════════════════════════════════════════
+//  Validation Helpers
+// ═══════════════════════════════════════════════════════════════
 
 function getServer() {
   if (!rpcUrl) {
@@ -28,7 +36,7 @@ function getServer() {
 function ensureContractId(contractId, envName) {
   if (!contractId) {
     throw new Error(
-      `Missing ${envName} in frontend .env. Add it to SkillX/frontend/.env and restart the frontend dev server.`
+      `Missing ${envName} in frontend .env. Add it to SkillX/frontend/.env and restart the dev server.`
     );
   }
   if (!StrKey.isValidContract(contractId)) {
@@ -42,14 +50,18 @@ function ensureStellarAddress(address) {
   }
 }
 
+function normalizeWallet(value) {
+  return value?.trim().toUpperCase() || "";
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  Freighter Wallet
+// ═══════════════════════════════════════════════════════════════
+
 function normalizeFreighterAddress(result) {
   if (!result) return "";
   if (typeof result === "string") return result;
   return result.address || result.publicKey || "";
-}
-
-function normalizeWallet(value) {
-  return value?.trim().toUpperCase() || "";
 }
 
 async function getFreighterWalletAddress() {
@@ -59,6 +71,10 @@ async function getFreighterWalletAddress() {
   ensureStellarAddress(walletAddress);
   return walletAddress;
 }
+
+// ═══════════════════════════════════════════════════════════════
+//  Transaction Execution Core
+// ═══════════════════════════════════════════════════════════════
 
 async function buildAndSendContractTx(
   contractId,
@@ -71,6 +87,7 @@ async function buildAndSendContractTx(
 
   const server = getServer();
   const walletAddress = await getFreighterWalletAddress();
+
   if (
     options.expectedSigner &&
     normalizeWallet(walletAddress) !== normalizeWallet(options.expectedSigner)
@@ -82,13 +99,11 @@ async function buildAndSendContractTx(
 
   const account = await server.getAccount(walletAddress);
   const contract = new Contract(contractId);
-  const operation = contract.call(method, ...args);
-
   const tx = new TransactionBuilder(account, {
     fee: "100000",
     networkPassphrase
   })
-    .addOperation(operation)
+    .addOperation(contract.call(method, ...args))
     .setTimeout(30)
     .build();
 
@@ -99,18 +114,13 @@ async function buildAndSendContractTx(
 
   if (signed.error) throw new Error(signed.error);
 
-  // Get the raw signed XDR string — do NOT parse it back through
-  // TransactionBuilder.fromXDR(), which causes "Bad union switch: 1"
-  // due to envelope format differences between Freighter v4 and SDK v13.
+  // Send the raw signed XDR directly — avoids "Bad union switch: 1" issues
+  // from parsing between Freighter v4 and SDK v13 envelope formats.
   const signedXdr = signed.signedTxXdr || signed;
-
-  // Send the raw XDR directly to the Soroban RPC endpoint
   const sent = await sendRawTransaction(signedXdr);
   return waitForTransaction(server, sent, method);
 }
 
-// Send a signed transaction XDR directly to the Soroban RPC without
-// needing to parse it back into a Transaction object first.
 async function sendRawTransaction(signedXdr) {
   const response = await fetch(rpcUrl, {
     method: "POST",
@@ -145,9 +155,7 @@ async function waitForTransaction(server, sent, method) {
     const result = await getTransactionStatus(sent.hash);
     lastStatus = result.status || lastStatus;
 
-    if (result.status === "SUCCESS") {
-      return { ...sent, result };
-    }
+    if (result.status === "SUCCESS") return { ...sent, result };
     if (result.status === "FAILED") {
       throw new Error(`Transaction ${method} failed on-chain.`);
     }
@@ -177,6 +185,10 @@ async function getTransactionStatus(hash) {
   return data.result || {};
 }
 
+// ═══════════════════════════════════════════════════════════════
+//  Read-Only Simulation
+// ═══════════════════════════════════════════════════════════════
+
 async function simulateContractCall(contractId, envName, method, args = []) {
   ensureContractId(contractId, envName);
 
@@ -203,6 +215,10 @@ async function simulateContractCall(contractId, envName, method, args = []) {
   return scValToNative(simulation.result.retval);
 }
 
+// ═══════════════════════════════════════════════════════════════
+//  Byte Helpers
+// ═══════════════════════════════════════════════════════════════
+
 function ensureHex32(hex) {
   if (!/^[0-9a-fA-F]{64}$/.test(hex)) {
     throw new Error("Expected a 32-byte hex string");
@@ -215,93 +231,74 @@ function hexToBytesScVal(hex) {
   return xdr.ScVal.scvBytes(bytes);
 }
 
+// ═══════════════════════════════════════════════════════════════
+//  Public API
+// ═══════════════════════════════════════════════════════════════
+
 export const contracts = {
   getConnectedWalletAddress: getFreighterWalletAddress,
-  ensureJobManagerConfigured() {
-    ensureContractId(jobManagerContractId, "VITE_JOB_MANAGER_CONTRACT_ID");
-  },
-  ensureEscrowConfigured() {
-    ensureContractId(escrowContractId, "VITE_ESCROW_CONTRACT_ID");
-  },
-  ensureMilestoneManagerConfigured() {
-    ensureContractId(milestoneManagerContractId, "VITE_MILESTONE_MANAGER_CONTRACT_ID");
-  },
 
-  // ═══════════════════════════════════════════════════════════
-  //  JOB MANAGER — create, accept, complete, cancel, view
-  // ═══════════════════════════════════════════════════════════
+  // ─── JOB MANAGER ─────────────────────────────────────────────
 
-  async createJobOnChain({
-    jobIdHex,
-    jobHashHex,
-    clientAddress,
-    totalAmount,
-  }) {
+  async createJobOnChain({ jobIdHex, jobHashHex, clientAddress, totalAmount }) {
     ensureStellarAddress(clientAddress);
-    const args = [
-      hexToBytesScVal(jobIdHex),
-      hexToBytesScVal(jobHashHex),
-      Address.fromString(clientAddress).toScVal(),
-      nativeToScVal(totalAmount, { type: "i128" }),
-    ];
     return buildAndSendContractTx(
       jobManagerContractId,
       "VITE_JOB_MANAGER_CONTRACT_ID",
       "create_job",
-      args,
+      [
+        hexToBytesScVal(jobIdHex),
+        hexToBytesScVal(jobHashHex),
+        Address.fromString(clientAddress).toScVal(),
+        nativeToScVal(totalAmount, { type: "i128" }),
+      ],
       { expectedSigner: clientAddress }
     );
   },
 
   async acceptJobOnChain(jobIdHex, freelancerAddress) {
     ensureStellarAddress(freelancerAddress);
-    const args = [
-      hexToBytesScVal(jobIdHex),
-      Address.fromString(freelancerAddress).toScVal()
-    ];
     return buildAndSendContractTx(
       jobManagerContractId,
       "VITE_JOB_MANAGER_CONTRACT_ID",
       "accept_job",
-      args,
+      [
+        hexToBytesScVal(jobIdHex),
+        Address.fromString(freelancerAddress).toScVal()
+      ],
       { expectedSigner: freelancerAddress }
     );
   },
 
   async completeJobOnChain(jobIdHex, clientAddress) {
-    const args = [hexToBytesScVal(jobIdHex)];
     return buildAndSendContractTx(
       jobManagerContractId,
       "VITE_JOB_MANAGER_CONTRACT_ID",
       "complete_job",
-      args,
+      [hexToBytesScVal(jobIdHex)],
       clientAddress ? { expectedSigner: clientAddress } : {}
     );
   },
 
   async getJobOnChain(jobIdHex) {
-    const args = [hexToBytesScVal(jobIdHex)];
     return simulateContractCall(
       jobManagerContractId,
       "VITE_JOB_MANAGER_CONTRACT_ID",
       "get_job",
-      args
+      [hexToBytesScVal(jobIdHex)]
     );
   },
 
   async getJobStatusOnChain(jobIdHex) {
-    const args = [hexToBytesScVal(jobIdHex)];
     return simulateContractCall(
       jobManagerContractId,
       "VITE_JOB_MANAGER_CONTRACT_ID",
       "get_job_status",
-      args
+      [hexToBytesScVal(jobIdHex)]
     );
   },
 
-  // ═══════════════════════════════════════════════════════════
-  //  MILESTONE MANAGER — add, submit, approve, view
-  // ═══════════════════════════════════════════════════════════
+  // ─── MILESTONE MANAGER ──────────────────────────────────────
 
   async addMilestonesOnChain({
     jobIdHex,
@@ -314,116 +311,106 @@ export const contracts = {
   }) {
     ensureStellarAddress(clientAddress);
     ensureStellarAddress(freelancerAddress);
-    const args = [
-      hexToBytesScVal(jobIdHex),
-      Address.fromString(clientAddress).toScVal(),
-      Address.fromString(freelancerAddress).toScVal(),
-      nativeToScVal(totalAmount, { type: "i128" }),
-      xdr.ScVal.scvVec((milestoneHashesHex || []).map((h) => hexToBytesScVal(h))),
-      xdr.ScVal.scvVec(
-        (milestonePercentages || []).map((p) => nativeToScVal(p, { type: "u32" }))
-      ),
-      xdr.ScVal.scvVec(
-        (milestoneDeadlines || []).map((d) => nativeToScVal(d, { type: "u64" }))
-      ),
-    ];
     return buildAndSendContractTx(
       milestoneManagerContractId,
       "VITE_MILESTONE_MANAGER_CONTRACT_ID",
       "add_milestones",
-      args,
+      [
+        hexToBytesScVal(jobIdHex),
+        Address.fromString(clientAddress).toScVal(),
+        Address.fromString(freelancerAddress).toScVal(),
+        nativeToScVal(totalAmount, { type: "i128" }),
+        xdr.ScVal.scvVec((milestoneHashesHex || []).map((h) => hexToBytesScVal(h))),
+        xdr.ScVal.scvVec(
+          (milestonePercentages || []).map((p) => nativeToScVal(p, { type: "u32" }))
+        ),
+        xdr.ScVal.scvVec(
+          (milestoneDeadlines || []).map((d) => nativeToScVal(d, { type: "u64" }))
+        ),
+      ],
       { expectedSigner: clientAddress }
     );
   },
 
   async submitMilestoneOnChain(jobIdHex, milestoneIndex, freelancerAddress) {
-    const args = [
-      hexToBytesScVal(jobIdHex),
-      nativeToScVal(milestoneIndex, { type: "u32" })
-    ];
     return buildAndSendContractTx(
       milestoneManagerContractId,
       "VITE_MILESTONE_MANAGER_CONTRACT_ID",
       "submit_milestone",
-      args,
+      [
+        hexToBytesScVal(jobIdHex),
+        nativeToScVal(milestoneIndex, { type: "u32" })
+      ],
       freelancerAddress ? { expectedSigner: freelancerAddress } : {}
     );
   },
 
   async approveMilestoneOnChain(jobIdHex, milestoneIndex, clientAddress) {
-    const args = [
-      hexToBytesScVal(jobIdHex),
-      nativeToScVal(milestoneIndex, { type: "u32" })
-    ];
     return buildAndSendContractTx(
       milestoneManagerContractId,
       "VITE_MILESTONE_MANAGER_CONTRACT_ID",
       "approve_milestone",
-      args,
+      [
+        hexToBytesScVal(jobIdHex),
+        nativeToScVal(milestoneIndex, { type: "u32" })
+      ],
       clientAddress ? { expectedSigner: clientAddress } : {}
     );
   },
 
   async getMilestoneOnChain(jobIdHex, milestoneIndex) {
-    const args = [
-      hexToBytesScVal(jobIdHex),
-      nativeToScVal(milestoneIndex, { type: "u32" })
-    ];
     return simulateContractCall(
       milestoneManagerContractId,
       "VITE_MILESTONE_MANAGER_CONTRACT_ID",
       "get_milestone",
-      args
+      [
+        hexToBytesScVal(jobIdHex),
+        nativeToScVal(milestoneIndex, { type: "u32" })
+      ]
     );
   },
 
   async getMilestonesOnChain(jobIdHex) {
-    const args = [hexToBytesScVal(jobIdHex)];
     return simulateContractCall(
       milestoneManagerContractId,
       "VITE_MILESTONE_MANAGER_CONTRACT_ID",
       "get_milestones",
-      args
+      [hexToBytesScVal(jobIdHex)]
     );
   },
 
   async allMilestonesPaidOnChain(jobIdHex) {
-    const args = [hexToBytesScVal(jobIdHex)];
     return simulateContractCall(
       milestoneManagerContractId,
       "VITE_MILESTONE_MANAGER_CONTRACT_ID",
       "all_milestones_paid",
-      args
+      [hexToBytesScVal(jobIdHex)]
     );
   },
 
-  // ═══════════════════════════════════════════════════════════
-  //  ESCROW — deposit, balance
-  // ═══════════════════════════════════════════════════════════
+  // ─── ESCROW ─────────────────────────────────────────────────
 
   async depositEscrowOnChain(jobIdHex, clientAddress, amount) {
     ensureStellarAddress(clientAddress);
-    const args = [
-      hexToBytesScVal(jobIdHex),
-      Address.fromString(clientAddress).toScVal(),
-      nativeToScVal(amount, { type: "i128" })
-    ];
     return buildAndSendContractTx(
       escrowContractId,
       "VITE_ESCROW_CONTRACT_ID",
       "deposit",
-      args,
+      [
+        hexToBytesScVal(jobIdHex),
+        Address.fromString(clientAddress).toScVal(),
+        nativeToScVal(amount, { type: "i128" })
+      ],
       { expectedSigner: clientAddress }
     );
   },
 
   async getEscrowBalanceOnChain(jobIdHex) {
-    const args = [hexToBytesScVal(jobIdHex)];
     return simulateContractCall(
       escrowContractId,
       "VITE_ESCROW_CONTRACT_ID",
       "get_balance",
-      args
+      [hexToBytesScVal(jobIdHex)]
     );
   },
 };

@@ -20,7 +20,7 @@ pub enum JobStatus {
 }
 
 /// Core on-chain job record — lean by design.
-/// Milestones are now managed by the MilestoneManagerContract.
+/// Milestones are managed by MilestoneManagerContract.
 #[contracttype]
 #[derive(Clone)]
 pub struct Job {
@@ -35,7 +35,7 @@ pub struct Job {
 }
 
 // ═══════════════════════════════════════════════════════════════
-//  STORAGE KEYS
+//  EVENT TYPES
 // ═══════════════════════════════════════════════════════════════
 
 #[contracttype]
@@ -67,6 +67,10 @@ pub struct JobCompletedEvent {
     pub client: Address,
 }
 
+// ═══════════════════════════════════════════════════════════════
+//  STORAGE KEYS
+// ═══════════════════════════════════════════════════════════════
+
 #[contracttype]
 pub enum DataKey {
     /// job_id → Job
@@ -80,7 +84,7 @@ pub enum DataKey {
 }
 
 // ═══════════════════════════════════════════════════════════════
-//  ESCROW CLIENT  (cross-contract interface)
+//  CROSS-CONTRACT CLIENTS
 // ═══════════════════════════════════════════════════════════════
 
 mod escrow_client {
@@ -97,10 +101,6 @@ mod escrow_client {
         env.invoke_contract::<()>(escrow_id, &Symbol::new(env, "refund"), args);
     }
 }
-
-// ═══════════════════════════════════════════════════════════════
-//  MILESTONE MANAGER CLIENT  (cross-contract interface)
-// ═══════════════════════════════════════════════════════════════
 
 mod milestone_client {
     use soroban_sdk::{Address, BytesN, Env, Symbol, Val, Vec, IntoVal};
@@ -142,10 +142,6 @@ impl JobManagerContract {
     // ───────────────────────────────────────────────────────────
 
     /// One-time setup. Must be called immediately after deployment.
-    ///
-    /// * `admin`              – address that can update contract configuration.
-    /// * `escrow_contract`    – address of the already-deployed EscrowContract.
-    /// * `milestone_manager`  – address of the deployed MilestoneManagerContract.
     pub fn initialize(
         env: Env,
         admin: Address,
@@ -171,14 +167,7 @@ impl JobManagerContract {
 
     /// Client creates a new job.
     ///
-    /// Parameters
-    /// ──────────
-    /// * `job_id`        – caller-supplied unique ID (e.g. sha256 of job UUID).
-    /// * `job_hash`      – sha256 of the full off-chain job document.
-    /// * `client`        – client's wallet address (must sign).
-    /// * `total_amount`  – total XLM in stroops to be locked in escrow.
-    ///
-    /// Milestones are now registered separately via MilestoneManagerContract.
+    /// Milestones are registered separately via MilestoneManagerContract.
     pub fn create_job(
         env: Env,
         job_id: BytesN<32>,
@@ -186,21 +175,15 @@ impl JobManagerContract {
         client: Address,
         total_amount: i128,
     ) -> BytesN<32> {
-        // 1. Auth
         client.require_auth();
 
-        // 2. Uniqueness
         if env.storage().persistent().has(&DataKey::Job(job_id.clone())) {
             panic!("job_id already exists");
         }
-
-        // 3. Input sanity
         if total_amount <= 0 {
             panic!("total_amount must be positive");
         }
 
-        // 4. Persist
-        let client_for_event = client.clone();
         let job = Job {
             job_hash,
             client: client.clone(),
@@ -216,7 +199,7 @@ impl JobManagerContract {
             (Symbol::new(&env, "JobCreated"), job_id.clone()),
             &JobCreatedEvent {
                 job_id: job_id.clone(),
-                client: client_for_event,
+                client,
                 total_amount,
             },
         );
@@ -230,8 +213,7 @@ impl JobManagerContract {
 
     /// Freelancer claims an open job.
     ///
-    /// Rules
-    /// ─────
+    /// Rules:
     /// • Job must be in Open status.
     /// • Freelancer cannot be the same address as the client.
     /// • Sets job status → InProgress and records freelancer address.
@@ -263,21 +245,16 @@ impl JobManagerContract {
         );
 
         // Cross-contract: update the freelancer address on MilestoneManager
-        let mm_id: Address = env
-            .storage()
-            .instance()
-            .get(&DataKey::MilestoneManager)
-            .expect("milestone manager not configured");
+        let mm_id = Self::load_milestone_manager(&env);
         milestone_client::bind_freelancer(&env, &mm_id, &job_id, &freelancer);
     }
 
     // ───────────────────────────────────────────────────────────
-    //  COMPLETE JOB (called after all milestones are paid)
+    //  COMPLETE JOB
     // ───────────────────────────────────────────────────────────
 
     /// Mark a job as completed. Can be called by the client.
-    /// Verifies all milestones are paid via cross-contract call to
-    /// MilestoneManagerContract.
+    /// Verifies all milestones are paid via cross-contract call.
     pub fn complete_job(env: Env, job_id: BytesN<32>) {
         let mut job = Self::load_job(&env, &job_id);
         job.client.require_auth();
@@ -286,15 +263,8 @@ impl JobManagerContract {
             panic!("job not in progress");
         }
 
-        // Cross-contract: verify all milestones are paid
-        let mm_id: Address = env
-            .storage()
-            .instance()
-            .get(&DataKey::MilestoneManager)
-            .expect("milestone manager not configured");
-
-        let all_paid = milestone_client::all_milestones_paid(&env, &mm_id, &job_id);
-        if !all_paid {
+        let mm_id = Self::load_milestone_manager(&env);
+        if !milestone_client::all_milestones_paid(&env, &mm_id, &job_id) {
             panic!("not all milestones are paid yet");
         }
 
@@ -306,18 +276,17 @@ impl JobManagerContract {
         env.events().publish(
             (Symbol::new(&env, "JobCompleted"), job_id.clone()),
             &JobCompletedEvent {
-                job_id: job_id.clone(),
-                client: job.client.clone(),
+                job_id,
+                client: job.client,
             },
         );
     }
 
     // ───────────────────────────────────────────────────────────
-    //  CANCEL JOB  (refund remaining escrow to client)
+    //  CANCEL JOB (refund remaining escrow to client)
     // ───────────────────────────────────────────────────────────
 
-    /// Client cancels an Open job (no freelancer yet) and receives a full
-    /// refund from escrow.
+    /// Client cancels an Open job and receives a full refund from escrow.
     ///
     /// Rule: cannot cancel a job that is InProgress.
     pub fn cancel_job(env: Env, job_id: BytesN<32>) {
@@ -342,12 +311,7 @@ impl JobManagerContract {
         );
 
         // Refund escrow
-        let escrow_id: Address = env
-            .storage()
-            .instance()
-            .get(&DataKey::EscrowContract)
-            .expect("escrow not configured");
-
+        let escrow_id = Self::load_escrow(&env);
         escrow_client::refund(&env, &escrow_id, &job_id, &job.client);
     }
 
@@ -371,12 +335,7 @@ impl JobManagerContract {
 
     /// Update the EscrowContract address (admin only).
     pub fn update_escrow(env: Env, new_escrow: Address) {
-        let admin: Address = env
-            .storage()
-            .instance()
-            .get(&DataKey::Admin)
-            .expect("not initialised");
-        admin.require_auth();
+        Self::require_admin(&env);
         env.storage()
             .instance()
             .set(&DataKey::EscrowContract, &new_escrow);
@@ -384,12 +343,7 @@ impl JobManagerContract {
 
     /// Update the MilestoneManager address (admin only).
     pub fn update_milestone_manager(env: Env, new_mm: Address) {
-        let admin: Address = env
-            .storage()
-            .instance()
-            .get(&DataKey::Admin)
-            .expect("not initialised");
-        admin.require_auth();
+        Self::require_admin(&env);
         env.storage()
             .instance()
             .set(&DataKey::MilestoneManager, &new_mm);
@@ -404,6 +358,29 @@ impl JobManagerContract {
             .persistent()
             .get(&DataKey::Job(job_id.clone()))
             .unwrap_or_else(|| panic!("job not found"))
+    }
+
+    fn load_escrow(env: &Env) -> Address {
+        env.storage()
+            .instance()
+            .get(&DataKey::EscrowContract)
+            .expect("escrow not configured")
+    }
+
+    fn load_milestone_manager(env: &Env) -> Address {
+        env.storage()
+            .instance()
+            .get(&DataKey::MilestoneManager)
+            .expect("milestone manager not configured")
+    }
+
+    fn require_admin(env: &Env) {
+        let admin: Address = env
+            .storage()
+            .instance()
+            .get(&DataKey::Admin)
+            .expect("not initialised");
+        admin.require_auth();
     }
 }
 
