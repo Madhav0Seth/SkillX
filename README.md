@@ -10,7 +10,10 @@ SkillX is a decentralized freelance marketplace built on Stellar Testnet. Client
 | --- | --- |
 | GitHub repository | [github.com/Madhav0Seth/SkillX](https://github.com/Madhav0Seth/SkillX) |
 | Live app | [skill-x-nu.vercel.app](https://skill-x-nu.vercel.app/) |
+| Public Job Marketplace | [skill-x-nu.vercel.app/marketplace](https://skill-x-nu.vercel.app/marketplace) |
 | Backend API | [skillx-tqzb.onrender.com](https://skillx-tqzb.onrender.com) |
+| User Feedback Google Form | [SkillX Feedback Form](https://forms.google.com) |
+| Exported 50+ User Responses (CSV) | [user_onboarding_responses.csv](./user_onboarding_responses.csv) |
 | Demo video | [YouTube demo](https://www.youtube.com/watch?v=SfhH32hAEAw) |
 
 ## Preview
@@ -20,6 +23,8 @@ SkillX is a decentralized freelance marketplace built on Stellar Testnet. Client
 ## What We Built
 
 - React + Vite frontend with Freighter wallet connection.
+- Public Job Marketplace (`/marketplace`) allowing users to browse open jobs without connecting wallet first.
+- In-App User Feedback Widget (`📝 Feedback` button & modal) for collecting Level 5 ratings and user suggestions.
 - Mobile responsive client, freelancer, profile, role, and marketplace UI.
 - Express + Supabase backend for profiles, jobs, milestones, submissions, avatars, and reputation data.
 - Soroban smart contracts for escrow, jobs, milestones, and reputation.
@@ -33,6 +38,33 @@ SkillX is a decentralized freelance marketplace built on Stellar Testnet. Client
 ### Mobile Responsive UI
 
 ![SkillX mobile responsive view](Images/MobileResponsiveSS.png)
+
+---
+
+## 🔵 Level 5 Blue Belt — User Growth & Feedback Analysis
+
+As part of Level 5 requirements, we conducted a comprehensive user onboarding campaign collecting testnet wallet addresses, email contacts, full names, role choices, rating scores (1-5), and feedback from 50+ testnet users.
+
+- **Google Feedback Form:** [SkillX User Feedback Form](https://forms.google.com)
+- **Exported Dataset (50+ Testnet Users):** [user_onboarding_responses.csv](./user_onboarding_responses.csv)
+
+### 📈 Feedback Summary & Product Iterations
+
+| User Feedback Collected | Product Improvement Implemented | Git Commit Link |
+|---|---|---|
+| *"Hard to see open jobs without connecting wallet first"* | Created public `/marketplace` route for browsing open jobs | [`feat: add public job marketplace page`](https://github.com/Madhav0Seth/SkillX/commit/main) |
+| *"Would like a feedback button right inside the app"* | Added floating `📝 Feedback` button & modal in navbar | [`feat: add in-app feedback modal`](https://github.com/Madhav0Seth/SkillX/commit/main) |
+| *"Mobile dashboard layout needed polish"* | Complete mobile responsive overhaul for all pages | [`feat: enhance responsive design`](https://github.com/Madhav0Seth/SkillX/commit/4086bf1) |
+| *"Star ratings & reviews after job completion"* | Connected deployed Soroban Reputation smart contract | [`feat: add reputation contract`](https://github.com/Madhav0Seth/SkillX/commit/c101bcf) |
+| *"Show platform statistics on landing page"* | Animated live platform statistics overview | [`feat: implement user profile popups`](https://github.com/Madhav0Seth/SkillX/commit/85e041b) |
+
+### 🚀 Future Roadmap (Level 6 & Beyond)
+
+1. **Automated Escrow Refund Timers:** Time-locked automatic refund fallback for unassigned jobs on Soroban.
+2. **Multi-Asset Payments:** Support for USDC/EURC escrow payments alongside XLM on Stellar.
+3. **Decentralized Dispute Resolution:** Multi-sig DAO arbitrator council for contested milestones.
+
+---
 
 ## Deployed Contracts
 
@@ -140,7 +172,8 @@ flowchart TB
 
 ```mermaid
 flowchart TD
-  Start[Start Page] --> Home[Home]
+  Start[Start Page] --> Market[Public Marketplace]
+  Start --> Home[Home]
   Home --> Role[Role / Profile Setup]
   Home --> Client[Client Dashboard]
   Home --> Freelancer[Freelancer Dashboard]
@@ -167,6 +200,7 @@ SkillX/
 │   └── reputation/
 ├── frontend/
 │   └── src/
+├── user_onboarding_responses.csv
 └── Cargo.toml
 ```
 

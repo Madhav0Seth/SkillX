@@ -7,6 +7,7 @@ import RolePage from "./pages/RolePage";
 import ClientDashboard from "./pages/ClientDashboard";
 import FreelancerDashboard from "./pages/FreelancerDashboard";
 import ProfilePage from "./pages/ProfilePage";
+import MarketplacePage from "./pages/MarketplacePage";
 import { useWallet } from "./context/WalletContext";
 
 function ProtectedRoute({ children }) {
@@ -32,6 +33,7 @@ export default function App() {
       <main className="page-container">
         <Routes>
           <Route path="/" element={<StartPage />} />
+          <Route path="/marketplace" element={<MarketplacePage />} />
           <Route
             path="/home"
             element={
