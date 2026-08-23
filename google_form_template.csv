@@ -1,0 +1,9 @@
+Question,Type,Required,Options,HelpText
+Full Name,Short Answer,TRUE,,
+Email Address,Short Answer,TRUE,,
+Stellar Testnet Wallet Address,Short Answer,TRUE,,e.g. G... starting address from Freighter wallet
+How did you test SkillX?,Multiple Choice,TRUE,As a Client|As a Freelancer|Both / General Tester,
+Overall Platform Rating,Linear Scale,TRUE,1-5 (1 = Needs Work | 5 = Excellent),
+What feature did you like most?,Paragraph,FALSE,,e.g. Soroban escrow security or 3D gear landing page
+What bugs or UI issues did you encounter?,Paragraph,FALSE,,
+What feature would you like to see next?,Paragraph,FALSE,,
