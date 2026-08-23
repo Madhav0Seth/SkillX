@@ -10,6 +10,7 @@ const RolePage = lazy(() => import("./pages/RolePage"));
 const ClientDashboard = lazy(() => import("./pages/ClientDashboard"));
 const FreelancerDashboard = lazy(() => import("./pages/FreelancerDashboard"));
 const ProfilePage = lazy(() => import("./pages/ProfilePage"));
+const FeedbackRoadmapPage = lazy(() => import("./pages/FeedbackRoadmapPage"));
 
 function ProtectedRoute({ children }) {
   const { isConnected } = useWallet();
@@ -36,6 +37,7 @@ export default function App() {
           <Routes>
           <Route path="/" element={<StartPage />} />
           <Route path="/marketplace" element={<MarketplacePage />} />
+          <Route path="/roadmap" element={<FeedbackRoadmapPage />} />
           <Route
             path="/home"
             element={
@@ -71,11 +73,7 @@ export default function App() {
           />
           <Route
             path="/profile"
-            element={
-              <ProtectedRoute>
-                <ProfilePage />
-              </ProtectedRoute>
-            }
+            element={<ProfilePage />}
           />
           </Routes>
         </Suspense>

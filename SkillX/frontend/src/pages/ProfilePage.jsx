@@ -89,7 +89,7 @@ const STAT_CONFIG = [
 ];
 
 export default function ProfilePage() {
-  const { address, profile } = useWallet();
+  const { address, profile, connectWallet, loading: walletLoading } = useWallet();
   const walletAddress = normalizeWallet(address);
   const [clientJobs, setClientJobs] = useState([]);
   const [freelancerJobs, setFreelancerJobs] = useState([]);
@@ -130,7 +130,6 @@ export default function ProfilePage() {
       setStats(null);
 
       if (!walletAddress) {
-        setStatus("Connect wallet to view your profile.");
         setBalanceStatus("Connect wallet to view your XLM balance.");
         return;
       }
@@ -177,6 +176,20 @@ export default function ProfilePage() {
 
   return (
     <div className="profile-layout">
+      {/* ── Native Disconnected Wallet Card ── */}
+      {!walletAddress && (
+        <div className="card" style={{ gridColumn: "1 / -1", padding: "2rem" }}>
+          <span className="home-kicker" style={{ marginBottom: "0.8rem" }}>Wallet Required</span>
+          <h2 style={{ fontSize: "1.8rem", margin: "0.5rem 0" }}>Connect Freighter to View Profile</h2>
+          <p style={{ margin: "0 0 1.2rem", color: "var(--muted)", maxWidth: "550px" }}>
+            Connect your Stellar wallet to view your on-chain reputation, escrow balance, and account activity.
+          </p>
+          <button onClick={connectWallet} disabled={walletLoading}>
+            {walletLoading ? "Connecting..." : "Connect Freighter"}
+          </button>
+        </div>
+      )}
+
       {/* Sidebar: Profile and Balance Info */}
       <aside className="profile-sidebar">
         <div className="card balance-card">
@@ -204,11 +217,11 @@ export default function ProfilePage() {
             </div>
             <div>
               <h3 style={{ margin: 0, fontSize: "1.2rem" }}>
-                {profile?.name || (profile?.role ? profile.role.toUpperCase() : "NO PROFILE")}
+                {profile?.name || (profile?.role ? profile.role.toUpperCase() : "UNREGISTERED USER")}
               </h3>
               <small style={{ opacity: 0.75, wordBreak: "break-all", fontSize: "0.8rem" }}>
                 {profile?.role ? `${profile.role.toUpperCase()} • ` : ""}
-                {address ? `${address.slice(0, 6)}...${address.slice(-6)}` : "Connect wallet"}
+                {address ? `${address.slice(0, 6)}...${address.slice(-6)}` : "No Wallet Connected"}
               </small>
             </div>
           </div>
@@ -255,41 +268,46 @@ export default function ProfilePage() {
               </div>
             </>
           ) : (
-            <p><Link to="/role">Set up your profile</Link> to get started on SkillX.</p>
+            <p>
+              {address ? (
+                <Link to="/role">Set up your profile</Link>
+              ) : (
+                "Connect Freighter wallet above to set up or view your profile."
+              )}{" "}
+              to get started on SkillX.
+            </p>
           )}
         </div>
       </aside>
 
       {/* Main Content Area: Stats and Jobs */}
       <main className="profile-main">
-        {/* ── Real Stats Grid ── */}
-        {walletAddress && (
-          <div className="profile-stats-card card">
-            <div className="section-heading">
-              <h3>Activity Overview</h3>
-              {statsLoading && <span className="stats-loading-indicator">Loading…</span>}
-            </div>
-            <div className="profile-stats-grid">
-              {STAT_CONFIG.map(({ key, label, icon, color, suffix }) => {
-                const value = stats ? stats[key] : null;
-                const displayValue = value !== null && value !== undefined
-                  ? key === "total_value_settled"
-                    ? formatValue(value)
-                    : String(value)
-                  : "--";
-                return (
-                  <div className="profile-stat-item" key={key} style={{ "--stat-accent": color }}>
-                    <span className="profile-stat-icon">{icon}</span>
-                    <span className="profile-stat-value">
-                      {displayValue}{value !== null && value !== undefined && suffix ? suffix : ""}
-                    </span>
-                    <span className="profile-stat-label">{label}</span>
-                  </div>
-                );
-              })}
-            </div>
+        {/* ── Activity Overview Stats Grid ── */}
+        <div className="profile-stats-card card">
+          <div className="section-heading">
+            <h3>Activity Overview</h3>
+            {statsLoading && <span className="stats-loading-indicator">Loading…</span>}
           </div>
-        )}
+          <div className="profile-stats-grid">
+            {STAT_CONFIG.map(({ key, label, icon, color, suffix }) => {
+              const value = stats ? stats[key] : null;
+              const displayValue = value !== null && value !== undefined
+                ? key === "total_value_settled"
+                  ? formatValue(value)
+                  : String(value)
+                : "--";
+              return (
+                <div className="profile-stat-item" key={key} style={{ "--stat-accent": color }}>
+                  <span className="profile-stat-icon">{icon}</span>
+                  <span className="profile-stat-value">
+                    {displayValue}{value !== null && value !== undefined && suffix ? suffix : ""}
+                  </span>
+                  <span className="profile-stat-label">{label}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
 
         <div className="dashboard-section">
           <div className="section-heading">
@@ -303,7 +321,9 @@ export default function ProfilePage() {
               ))}
             </div>
           ) : (
-            <p className="empty-state">No assigned freelancer jobs yet.</p>
+            <p className="empty-state">
+              {walletAddress ? "No assigned freelancer jobs yet." : "Connect wallet to view assigned jobs."}
+            </p>
           )}
         </div>
 
@@ -319,7 +339,9 @@ export default function ProfilePage() {
               ))}
             </div>
           ) : (
-            <p className="empty-state">No client jobs created from this wallet yet.</p>
+            <p className="empty-state">
+              {walletAddress ? "No client jobs created from this wallet yet." : "Connect wallet to view created jobs."}
+            </p>
           )}
         </div>
       </main>
