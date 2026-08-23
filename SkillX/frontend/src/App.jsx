@@ -1,14 +1,15 @@
 import { Navigate, Route, Routes } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import Header from "./components/Header";
-import HomePage from "./pages/HomePage";
-import StartPage from "./pages/StartPage";
-import RolePage from "./pages/RolePage";
-import ClientDashboard from "./pages/ClientDashboard";
-import FreelancerDashboard from "./pages/FreelancerDashboard";
-import ProfilePage from "./pages/ProfilePage";
-import MarketplacePage from "./pages/MarketplacePage";
 import { useWallet } from "./context/WalletContext";
+
+const StartPage = lazy(() => import("./pages/StartPage"));
+const MarketplacePage = lazy(() => import("./pages/MarketplacePage"));
+const HomePage = lazy(() => import("./pages/HomePage"));
+const RolePage = lazy(() => import("./pages/RolePage"));
+const ClientDashboard = lazy(() => import("./pages/ClientDashboard"));
+const FreelancerDashboard = lazy(() => import("./pages/FreelancerDashboard"));
+const ProfilePage = lazy(() => import("./pages/ProfilePage"));
 
 function ProtectedRoute({ children }) {
   const { isConnected } = useWallet();
@@ -19,7 +20,7 @@ function ProtectedRoute({ children }) {
 }
 
 export default function App() {
-  const [theme, setTheme] = useState(() => localStorage.getItem("theme") || "dark");
+  const [theme, setTheme] = useState(() => localStorage.getItem("theme") === "light" ? "light" : "dark");
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
@@ -31,7 +32,8 @@ export default function App() {
     <div className="app-shell">
       <Header theme={theme} onToggleTheme={() => setTheme(theme === "dark" ? "light" : "dark")} />
       <main className="page-container">
-        <Routes>
+        <Suspense fallback={<p className="empty-state" role="status">Loading…</p>}>
+          <Routes>
           <Route path="/" element={<StartPage />} />
           <Route path="/marketplace" element={<MarketplacePage />} />
           <Route
@@ -42,6 +44,7 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+          <Route path="*" element={<Navigate to="/" replace />} />
           <Route
             path="/role"
             element={
@@ -74,7 +77,8 @@ export default function App() {
               </ProtectedRoute>
             }
           />
-        </Routes>
+          </Routes>
+        </Suspense>
       </main>
     </div>
   );

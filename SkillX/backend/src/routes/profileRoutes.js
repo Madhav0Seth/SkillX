@@ -1,13 +1,10 @@
 const express = require("express");
 const { supabase } = require("../config/supabase");
 const { badRequest, internalError } = require("../utils/http");
+const { isWalletAddress, normalizeWallet, requiredText, validateUrl } = require("../utils/validation");
 
 const router = express.Router();
 const VALID_ROLES = new Set(["client", "freelancer", "both"]);
-
-function normalizeWallet(value) {
-  return typeof value === "string" ? value.trim().toUpperCase() : value;
-}
 
 async function getWalletStats(walletAddress) {
   const normalizedWalletAddress = normalizeWallet(walletAddress);
@@ -163,21 +160,28 @@ router.post("/profile", async (req, res) => {
     const { wallet_address, role, skills, bio, portfolio, avatar_url, name } = req.body;
     const walletAddress = normalizeWallet(wallet_address);
 
-    if (!walletAddress || !role) {
-      return badRequest(res, "wallet_address and role are required");
-    }
+    if (!isWalletAddress(walletAddress) || !role) return badRequest(res, "wallet_address must be a Stellar public key and role is required");
     if (!VALID_ROLES.has(role)) {
       return badRequest(res, "role must be client, freelancer, or both");
     }
 
+    const fieldsError =
+      (name && requiredText(name, "name", { max: 120 })) ||
+      (bio && requiredText(bio, "bio", { max: 2000 })) ||
+      (portfolio && validateUrl(portfolio, "portfolio")) ||
+      (avatar_url && validateUrl(avatar_url, "avatar_url"));
+    if (fieldsError) return badRequest(res, fieldsError);
+    if (skills !== undefined && (!Array.isArray(skills) || skills.length > 30 || skills.some((skill) => typeof skill !== "string" || skill.trim().length === 0 || skill.trim().length > 80))) {
+      return badRequest(res, "skills must be an array of up to 30 short strings");
+    }
     const payload = {
       wallet_address: walletAddress,
       role,
-      skills: skills || [],
-      bio: bio || "",
-      portfolio: portfolio || "",
-      avatar_url: avatar_url || "",
-      name: name || ""
+      skills: (skills || []).map((skill) => skill.trim()),
+      bio: typeof bio === "string" ? bio.trim() : "",
+      portfolio: typeof portfolio === "string" ? portfolio.trim() : "",
+      avatar_url: typeof avatar_url === "string" ? avatar_url.trim() : "",
+      name: typeof name === "string" ? name.trim() : ""
     };
 
     const { data, error } = await supabase
@@ -201,9 +205,7 @@ router.get("/profile/:walletAddress", async (req, res) => {
     const { walletAddress } = req.params;
     const normalizedWalletAddress = normalizeWallet(walletAddress);
 
-    if (!normalizedWalletAddress) {
-      return badRequest(res, "walletAddress is required");
-    }
+    if (!isWalletAddress(normalizedWalletAddress)) return badRequest(res, "walletAddress must be a Stellar public key");
 
     const { data, error } = await supabase
       .from("users")
@@ -230,6 +232,7 @@ router.get("/profile/:walletAddress", async (req, res) => {
 router.get("/freelancers", async (req, res) => {
   try {
     const { category } = req.query;
+    if (category && (typeof category !== "string" || category.trim().length > 80)) return badRequest(res, "category must be a short string");
 
     let query = supabase
       .from("users")
@@ -237,7 +240,7 @@ router.get("/freelancers", async (req, res) => {
       .in("role", ["freelancer", "both"]);
 
     if (category) {
-      query = query.contains("skills", [category]);
+      query = query.contains("skills", [category.trim()]);
     }
 
     const { data, error } = await query;
@@ -267,9 +270,7 @@ router.get("/profile/:walletAddress/stats", async (req, res) => {
     const { walletAddress } = req.params;
     const normalized = normalizeWallet(walletAddress);
 
-    if (!normalized) {
-      return badRequest(res, "walletAddress is required");
-    }
+    if (!isWalletAddress(normalized)) return badRequest(res, "walletAddress must be a Stellar public key");
 
     const { stats, reputation } = await getWalletStats(normalized);
 

@@ -409,6 +409,10 @@ export default function ClientDashboard() {
       const normalizedFreelancerWallet = freelancerWallet
         ? normalizeWallet(freelancerWallet)
         : "";
+      if (!normalizedFreelancerWallet) {
+        setStatus("Select a registered freelancer before creating a job. Open-job milestone assignment is not supported by the deployed contracts.");
+        return;
+      }
 
       const parsedMilestones = milestones.map((m) => ({
         ...m,
@@ -464,7 +468,6 @@ export default function ClientDashboard() {
       try {
         const totalAmount = parsedMilestones.reduce((sum, m) => sum + m.amount, 0);
 
-        // Step 1: Create job on JobManager (no milestones)
         await contracts.createJobOnChain({
           jobIdHex: result.job.job_hash,
           jobHashHex: result.job.job_hash,
@@ -472,21 +475,16 @@ export default function ClientDashboard() {
           totalAmount,
         });
 
-        // Step 2: Deposit escrow
         const txResult = await contracts.depositEscrowOnChain(
           result.job.job_hash,
           address,
           totalAmount
         );
 
-        // Step 3: Register milestones on MilestoneManager
-        // If there's a freelancer assigned, use their address; otherwise use a placeholder
-        // (milestones will be updated when freelancer accepts)
-        const freelancerAddr = normalizedFreelancerWallet || address;
         await contracts.addMilestonesOnChain({
           jobIdHex: result.job.job_hash,
           clientAddress: address,
-          freelancerAddress: freelancerAddr,
+          freelancerAddress: normalizedFreelancerWallet,
           totalAmount,
           milestoneHashesHex: milestoneHashes,
           milestonePercentages: parsedMilestones.map((m) => m.percentage),
@@ -496,7 +494,6 @@ export default function ClientDashboard() {
         setTxHash(txResult.hash);
         setStatus(`Job created on-chain, escrow funded, and milestones registered. DB Job ID: ${result.job.job_id}`);
       } catch (contractError) {
-        console.error("DETAILED CONTRACT ERROR:", contractError);
         const contractMessage = contractError.message.includes("VITE_JOB_MANAGER_CONTRACT_ID")
           ? "Job Manager contract ID is not configured."
           : contractError.message.includes("VITE_MILESTONE_MANAGER_CONTRACT_ID")

@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:4000";
+import { API_BASE_URL } from "../config";
 
 /**
  * Map raw error text to a friendly message the user can actually understand.
@@ -21,16 +21,22 @@ function friendlyError(rawMessage, statusCode) {
 }
 
 async function request(path, options = {}) {
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 15_000);
   let res;
   try {
     res = await fetch(`${API_BASE_URL}${path}`, {
       headers: { "Content-Type": "application/json", ...(options.headers || {}) },
-      ...options
+      ...options,
+      signal: options.signal || controller.signal,
     });
-  } catch (_error) {
+  } catch (error) {
+    if (error.name === "AbortError") throw new Error("The API request timed out. Please try again.");
     throw new Error(
-      "Cannot reach backend API. Check that the backend server is running."
+      "Cannot reach the backend API. Please try again later."
     );
+  } finally {
+    window.clearTimeout(timeout);
   }
 
   const contentType = res.headers.get("content-type") || "";
@@ -42,7 +48,7 @@ async function request(path, options = {}) {
   }
 
   const data = contentType.includes("application/json")
-    ? await res.json()
+    ? await res.json().catch(() => ({ error: "The server returned invalid JSON." }))
     : { error: await res.text() };
 
   if (!res.ok) {

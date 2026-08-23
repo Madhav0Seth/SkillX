@@ -1340,36 +1340,12 @@ select:focus {
     padding: 1.2rem;
   }
 
-  .avatar-preview-container {
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    gap: 1rem;
-  }
 }
 
 @media (max-width: 480px) {
   .start-logo {
     font-size: 4.2rem;
   }
-}
-
-/* ==========================================================================
-   AVATAR / PROFILE PICTURE SELECTION SYSTEM
-   ========================================================================== */
-.avatar-selection-section {
-  background: var(--surface-2);
-  border: 2px dashed var(--border);
-  border-radius: var(--radius-sm);
-  padding: 1.5rem;
-  margin-bottom: 1.5rem;
-}
-
-.avatar-preview-container {
-  display: flex;
-  align-items: center;
-  gap: 1.25rem;
-  margin-bottom: 1.25rem;
 }
 
 .avatar-preview-lg {
@@ -1398,47 +1374,6 @@ select:focus {
   opacity: 0.4;
 }
 
-.avatar-presets-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.8rem;
-  margin-top: 0.5rem;
-}
-
-.avatar-preset-btn {
-  width: 55px;
-  height: 55px;
-  border-radius: 50%;
-  border: 2.5px solid var(--border);
-  cursor: pointer;
-  overflow: hidden;
-  transition: var(--transition);
-  background: var(--surface);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  box-shadow: 2px 2px 0px var(--border);
-}
-
-.avatar-preset-btn:hover {
-  transform: scale(1.15) rotate(4deg);
-  border-color: var(--primary);
-  box-shadow: 3px 3px 0px var(--border);
-}
-
-.avatar-preset-btn.active {
-  transform: scale(1.15) rotate(-3deg);
-  border-color: var(--crayon-green);
-  box-shadow: 3px 3px 0px var(--border);
-}
-
-.avatar-preset-btn img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
 .avatar-image-circle {
   width: 44px;
   height: 44px;
@@ -1462,96 +1397,6 @@ select:focus {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-}
-
-/* ==========================================================================
-   IMAGE CROPPING MODAL SYSTEM
-   ========================================================================== */
-.cropper-modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.85);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  backdrop-filter: blur(6px);
-}
-
-.cropper-modal-content {
-  background: var(--surface);
-  border: 3px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 1.5rem;
-  width: 90%;
-  max-width: 360px;
-  box-shadow: 8px 8px 0px rgba(0, 0, 0, 0.3);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1.25rem;
-}
-
-.cropper-modal-content h4 {
-  margin: 0;
-  font-family: var(--font-fancy);
-  font-size: 1.5rem;
-  color: var(--primary);
-  text-align: center;
-}
-
-.crop-canvas-wrapper {
-  border: 3.5px solid var(--border);
-  border-radius: var(--radius-sm);
-  overflow: hidden;
-  cursor: grab;
-  position: relative;
-  background: #121214;
-  width: 300px;
-  height: 300px;
-  touch-action: none;
-  box-shadow: inset 0px 4px 10px rgba(0, 0, 0, 0.5);
-}
-
-.crop-canvas-wrapper:active {
-  cursor: grabbing;
-}
-
-.cropper-controls {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 0.8rem;
-}
-
-.zoom-slider-row {
-  display: flex;
-  align-items: center;
-  gap: 0.8rem;
-  width: 100%;
-  font-size: 0.9rem;
-}
-
-.zoom-slider-row input[type="range"] {
-  flex: 1;
-  height: 6px;
-  background: var(--surface-2);
-  border: 2px solid var(--border);
-  border-radius: 3px;
-  outline: none;
-  cursor: pointer;
-}
-
-.zoom-slider-row input[type="range"]::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: var(--primary);
-  border: 2px solid var(--border);
 }
 
 /* ==========================================================================
@@ -2565,26 +2410,10 @@ textarea {
   min-width: 0;
 }
 
-.avatar-input-panel {
-  flex: 1;
-  min-width: 0;
-}
-
-.avatar-url-row,
-.cropper-action-row,
 .freelancer-identity-row {
   display: flex;
   gap: 1rem;
   width: 100%;
-}
-
-.avatar-url-row {
-  gap: 0.5rem;
-  margin-bottom: 0.5rem;
-}
-
-.cropper-action-row {
-  margin-top: 0.5rem;
 }
 
 .freelancer-identity-row {
@@ -2800,24 +2629,19 @@ textarea {
   }
 
   .row-actions,
-  .wallet-field-row,
-  .avatar-url-row,
-  .cropper-action-row {
+  .wallet-field-row {
     align-items: stretch;
     flex-direction: column;
   }
 
   .row-actions > *,
   .wallet-field-row > *,
-  .avatar-url-row > *,
-  .cropper-action-row > *,
   .job-card .row-actions button,
   .job-card .row-actions .btn-link {
     width: 100%;
   }
 
-  .wallet-field-row button,
-  .avatar-url-row button {
+  .wallet-field-row button {
     height: auto !important;
     min-height: 48px;
     padding: 0.65rem 1rem !important;
@@ -2894,7 +2718,6 @@ textarea {
   }
 
   .status-modal-overlay,
-  .cropper-modal-overlay,
   .profile-popup-overlay {
     padding: 1rem;
     align-items: flex-start;
@@ -2902,7 +2725,6 @@ textarea {
   }
 
   .status-modal-content,
-  .cropper-modal-content,
   .profile-popup-content {
     width: 100%;
     margin: auto 0;
@@ -3004,24 +2826,6 @@ textarea {
   .profile-stats-grid,
   .profile-popup-stats {
     grid-template-columns: 1fr;
-  }
-
-  .avatar-selection-section {
-    padding: 1rem;
-  }
-
-  .avatar-presets-grid {
-    justify-content: center;
-  }
-
-  .crop-canvas-wrapper {
-    width: min(300px, calc(100vw - 4rem));
-    height: min(300px, calc(100vw - 4rem));
-  }
-
-  .crop-canvas-wrapper canvas {
-    width: 100%;
-    height: 100%;
   }
 
   .profile-popup-header {

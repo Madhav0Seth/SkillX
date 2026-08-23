@@ -122,22 +122,7 @@ async function buildAndSendContractTx(
 }
 
 async function sendRawTransaction(signedXdr) {
-  const response = await fetch(rpcUrl, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      jsonrpc: "2.0",
-      id: 1,
-      method: "sendTransaction",
-      params: { transaction: signedXdr }
-    })
-  });
-
-  const data = await response.json();
-  if (data.error) {
-    throw new Error(data.error.message || JSON.stringify(data.error));
-  }
-  return data.result || {};
+  return rpcRequest("sendTransaction", { transaction: signedXdr });
 }
 
 async function waitForTransaction(server, sent, method) {
@@ -167,22 +152,35 @@ async function waitForTransaction(server, sent, method) {
 }
 
 async function getTransactionStatus(hash) {
-  const response = await fetch(rpcUrl, {
+  return rpcRequest("getTransaction", { hash });
+}
+
+async function rpcRequest(method, params) {
+  if (!rpcUrl) throw new Error("Missing VITE_SOROBAN_RPC_URL in frontend .env");
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 15_000);
+  try {
+    const response = await fetch(rpcUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       jsonrpc: "2.0",
       id: 1,
-      method: "getTransaction",
-      params: { hash }
-    })
-  });
-
-  const data = await response.json();
-  if (data.error) {
-    throw new Error(data.error.message || "Transaction status lookup failed");
+      method,
+      params,
+    }),
+    signal: controller.signal,
+    });
+    if (!response.ok) throw new Error(`Soroban RPC returned ${response.status}`);
+    const data = await response.json();
+    if (data.error) throw new Error(data.error.message || `${method} failed`);
+    return data.result || {};
+  } catch (error) {
+    if (error.name === "AbortError") throw new Error(`Soroban RPC ${method} timed out`);
+    throw error;
+  } finally {
+    window.clearTimeout(timeout);
   }
-  return data.result || {};
 }
 
 // ═══════════════════════════════════════════════════════════════

@@ -147,8 +147,6 @@ export default function ProfilePage() {
         setStatsLoading(true);
         const result = await api.getProfileStats(walletAddress);
         setStats(result.stats || null);
-      } catch (error) {
-        console.warn("Could not load stats:", error.message);
       } finally {
         setStatsLoading(false);
       }
@@ -330,4 +328,3 @@ export default function ProfilePage() {
     </div>
   );
 }
-

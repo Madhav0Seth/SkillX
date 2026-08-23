@@ -14,9 +14,21 @@ Express + Supabase backend for the decentralized freelance marketplace.
 4. Start server:
    - `npm run dev`
 
+For a deployed frontend, set `CORS_ORIGIN` to its exact origin (or a comma-separated
+allow-list). The development default is `http://localhost:5173`.
+
 ## Database
 
-Run `supabase-schema.sql` in Supabase SQL editor.
+Run `supabase-schema.sql` in Supabase SQL editor. It is idempotent and also installs
+the transactional RPC functions required by the API.
+
+## Security boundary
+
+The current wallet fields identify an actor but do **not** prove wallet ownership.
+Before exposing mutations publicly, add a Freighter/Soroban signed challenge and verify
+it server-side, then derive the actor wallet from that verified session rather than the
+request body. Keep the Supabase service-role key exclusively in this backend and never
+ship it to the frontend.
 
 ## Soroban events
 
@@ -110,6 +122,7 @@ Create a milestone submission. `submission_hash` is generated automatically.
 ```json
 {
   "milestone_id": 1,
-  "file_url": "https://storage.example/submissions/demo.zip"
+  "file_url": "https://storage.example/submissions/demo.zip",
+  "freelancer_wallet": "GF...."
 }
 ```

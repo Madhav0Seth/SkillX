@@ -193,7 +193,6 @@ export default function FreelancerDashboard() {
   const [assignedJobs, setAssignedJobs] = useState([]);
   const [completedJobs, setCompletedJobs] = useState([]);
   const [openJobs, setOpenJobs] = useState([]);
-  const [rejectedJobIds, setRejectedJobIds] = useState([]);
   const [milestones, setMilestones] = useState([]);
   const [milestoneId, setMilestoneId] = useState("");
   const [fileUrl, setFileUrl] = useState("");
@@ -404,9 +403,7 @@ export default function FreelancerDashboard() {
         limit: 30
       });
       const availableJobs = (result.jobs || []).filter(
-        (item) =>
-          normalizeWallet(item.client_wallet) !== walletAddress &&
-          !rejectedJobIds.includes(item.job_id)
+        (item) => normalizeWallet(item.client_wallet) !== walletAddress
       );
       setOpenJobs(availableJobs);
       if (!availableJobs.length) {
@@ -521,28 +518,6 @@ export default function FreelancerDashboard() {
       );
     } catch (error) {
       setStatus(`Accept failed: ${error.message}`);
-    }
-  };
-
-  const rejectJob = async (selectedJob) => {
-    try {
-      if (!walletAddress) {
-        setStatus("Connect wallet first.");
-        return;
-      }
-      await api.rejectJob(selectedJob.job_id, walletAddress);
-      setStatus(`Rejected job ${selectedJob.job_id}.`);
-      setRejectedJobIds((prev) => [...prev, selectedJob.job_id]);
-      setOpenJobs((prev) => prev.filter((item) => item.job_id !== selectedJob.job_id));
-      setAssignedJobs((prev) => prev.filter((item) => item.job_id !== selectedJob.job_id));
-      setCompletedJobs((prev) => prev.filter((item) => item.job_id !== selectedJob.job_id));
-      if (job && job.job_id === selectedJob.job_id) {
-        setJob(null);
-        setMilestones([]);
-        setMilestoneId("");
-      }
-    } catch (error) {
-      setStatus(`Reject failed: ${error.message}`);
     }
   };
 
@@ -697,7 +672,8 @@ export default function FreelancerDashboard() {
       setTxHash(txResult.hash);
       await api.submitMilestone({
         milestone_id: Number(milestoneId),
-        file_url: fileUrl
+        file_url: fileUrl,
+        freelancer_wallet: walletAddress
       });
       const refreshed = await api.getJob(job.job_id);
       setMilestones(refreshed.milestones || []);
@@ -825,7 +801,6 @@ export default function FreelancerDashboard() {
                       onSelect={selectJob}
                       isSelected={job?.job_id === item.job_id}
                       onAccept={acceptJob}
-                      onReject={rejectJob}
                       variant="open"
                     />
                   ))}
@@ -851,7 +826,6 @@ export default function FreelancerDashboard() {
                 <JobCard
                   job={job}
                   onAccept={job.freelancer_wallet || selectedJobCompleted ? undefined : acceptJob}
-                  onReject={job.freelancer_wallet || selectedJobCompleted ? undefined : rejectJob}
                   isSelected
                   statusLabel={selectedJobCompleted ? "Completed" : undefined}
                   statusTone={selectedJobCompleted ? "completed" : "default"}

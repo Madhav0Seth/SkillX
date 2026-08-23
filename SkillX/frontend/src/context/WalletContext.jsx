@@ -6,8 +6,9 @@ import {
   getAddress
 } from "@stellar/freighter-api";
 import { Horizon } from "@stellar/stellar-sdk";
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:4000";
+import { api } from "../services/api";
+import { HORIZON_URL } from "../config";
+import { normalizeWallet } from "../utils/wallet";
 
 const WalletContext = createContext(null);
 
@@ -23,47 +24,18 @@ export function WalletProvider({ children }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // ── Profile state (fetched from backend on wallet connect) ──
   const [profile, setProfile] = useState(null);
   const [profileLoading, setProfileLoading] = useState(false);
 
-  // ── Fetch profile from backend ──
   const fetchProfile = async (walletAddress) => {
-    const target = walletAddress || address;
+    const target = normalizeWallet(walletAddress || address);
     if (!target) return null;
-
     try {
       setProfileLoading(true);
-      const res = await fetch(
-        `${API_BASE_URL}/profile/${encodeURIComponent(target.trim().toUpperCase())}`,
-        { headers: { "Content-Type": "application/json" } }
-      );
-
-      if (res.status === 404) {
-        // Profile doesn't exist yet — that's fine, user needs to register
-        setProfile(null);
-        return null;
-      }
-
-      // Guard against HTML error pages (Cloudflare 5xx, Supabase down, etc.)
-      const contentType = res.headers.get("content-type") || "";
-      if (!contentType.includes("application/json")) {
-        console.warn("Profile fetch returned non-JSON (service may be down)");
-        setProfile(null);
-        return null;
-      }
-
-      if (!res.ok) {
-        console.error("Failed to fetch profile:", res.statusText);
-        setProfile(null);
-        return null;
-      }
-
-      const data = await res.json();
+      const data = await api.getProfile(target);
       setProfile(data.profile || null);
       return data.profile || null;
-    } catch (err) {
-      console.error("Failed to fetch profile:", err);
+    } catch {
       setProfile(null);
       return null;
     } finally {
@@ -114,12 +86,12 @@ export function WalletProvider({ children }) {
     const target = userAddress || address;
     if (!target) return;
     try {
-      const server = new Horizon.Server("https://horizon-testnet.stellar.org");
+      const server = new Horizon.Server(HORIZON_URL);
       const account = await server.loadAccount(target);
       const native = account.balances.find((b) => b.asset_type === "native");
       setBalance(native ? parseFloat(native.balance).toLocaleString() : "0");
-    } catch (err) {
-      console.error("Failed to fetch balance:", err);
+    } catch {
+      setBalance("0");
     }
   };
 

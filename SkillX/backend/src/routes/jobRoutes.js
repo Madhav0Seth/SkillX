@@ -1,363 +1,126 @@
 const express = require("express");
 const { supabase } = require("../config/supabase");
 const { sha256 } = require("../utils/hash");
-const { badRequest, internalError } = require("../utils/http");
+const { badRequest, internalError, notFound } = require("../utils/http");
+const { isWalletAddress, normalizeWallet, pageLimit, positiveId, requiredText, validateMilestones } = require("../utils/validation");
 
+const router = express.Router();
 const JOB_JOIN_SELECT = `
   *,
   client:users!client_wallet ( wallet_address, role, bio, avatar_url, name ),
   freelancer:users!freelancer_wallet ( wallet_address, role, bio, avatar_url, name )
 `;
 
-const router = express.Router();
-
 function hasRole(profile, role) {
   return profile?.role === role || profile?.role === "both";
 }
 
-function normalizeWallet(value) {
-  return typeof value === "string" ? value.trim().toUpperCase() : value;
+async function findJob(jobId, select = "*") {
+  const { data, error } = await supabase.from("jobs").select(select).eq("job_id", jobId).maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+async function findProfile(walletAddress) {
+  const { data, error } = await supabase.from("users").select("wallet_address, role").eq("wallet_address", walletAddress).maybeSingle();
+  if (error) throw error;
+  return data;
 }
 
 router.get("/jobs", async (req, res) => {
   try {
-    const { freelancer_wallet, client_wallet, limit, scope } = req.query;
+    const { freelancer_wallet, client_wallet, scope } = req.query;
     const freelancerWallet = normalizeWallet(freelancer_wallet);
     const clientWallet = normalizeWallet(client_wallet);
-
-    let query = supabase
-      .from("jobs")
-      .select(JOB_JOIN_SELECT)
-      .order("job_id", { ascending: false });
-
+    const limit = pageLimit(req.query.limit);
+    if (limit === null) return badRequest(res, "limit must be a positive integer no greater than 100");
+    if (![undefined, "open", "assigned"].includes(scope)) return badRequest(res, "scope must be open or assigned");
+    if (freelancer_wallet && !isWalletAddress(freelancerWallet)) return badRequest(res, "freelancer_wallet must be a Stellar public key");
+    if (client_wallet && !isWalletAddress(clientWallet)) return badRequest(res, "client_wallet must be a Stellar public key");
+    let query = supabase.from("jobs").select(JOB_JOIN_SELECT).order("job_id", { ascending: false }).limit(limit);
     if (freelancerWallet) {
-      if (scope === "assigned") {
-        query = query.ilike("freelancer_wallet", freelancerWallet);
-      } else if (scope === "open") {
-        query = query.is("freelancer_wallet", null);
-      } else {
-        query = query.or(
-          `freelancer_wallet.ilike.${freelancerWallet},freelancer_wallet.is.null`
-        );
-      }
-    } else if (scope === "open") {
-      query = query.is("freelancer_wallet", null);
-    }
-
-    if (clientWallet) {
-      query = query.ilike("client_wallet", clientWallet);
-    }
-
-    if (limit) {
-      query = query.limit(Number(limit));
-    }
-
+      if (scope === "assigned") query = query.eq("freelancer_wallet", freelancerWallet);
+      else if (scope === "open") query = query.is("freelancer_wallet", null);
+      else query = query.or(`freelancer_wallet.eq.${freelancerWallet},freelancer_wallet.is.null`);
+    } else if (scope === "open") query = query.is("freelancer_wallet", null);
+    if (clientWallet) query = query.eq("client_wallet", clientWallet);
     const { data, error } = await query;
-    if (error) {
-      throw error;
-    }
-
+    if (error) throw error;
     return res.json({ jobs: data || [] });
-  } catch (error) {
-    return internalError(res, error);
-  }
+  } catch (error) { return internalError(res, error); }
 });
 
 router.post("/job", async (req, res) => {
   try {
-    const { client_wallet, freelancer_wallet, title, description, milestones } =
-      req.body;
+    const { client_wallet, freelancer_wallet, title, description, milestones } = req.body || {};
     const clientWallet = normalizeWallet(client_wallet);
-    const freelancerWallet = normalizeWallet(freelancer_wallet);
-
-    if (!clientWallet || !title || !description) {
-      return badRequest(
-        res,
-        "client_wallet, title, and description are required"
-      );
-    }
-
-    // 1. Verify client has a profile
-    const { data: clientProfile, error: clientProfileError } = await supabase
-      .from("users")
-      .select("wallet_address, role")
-      .ilike("wallet_address", clientWallet)
-      .single();
-
-    if (clientProfileError || !hasRole(clientProfile, "client")) {
-      return res.status(403).json({
-        error: "Client identity not found. Register as Client or Both before creating jobs.",
-      });
-    }
-
-    // 2. Verify freelancer profile if wallet provided
-    if (freelancerWallet) {
-      const { data: freelancerProfile, error: freelancerProfileError } =
-        await supabase
-          .from("users")
-          .select("wallet_address, role")
-          .ilike("wallet_address", freelancerWallet)
-          .single();
-
-      if (freelancerProfileError || !hasRole(freelancerProfile, "freelancer")) {
-        return res.status(400).json({
-          error: `Selected wallet is not registered as a freelancer: ${freelancerWallet}`,
-        });
-      }
-    }
-
-    const jobHash = sha256(
-      JSON.stringify({
-        client_wallet: clientWallet,
-        freelancer_wallet: freelancerWallet || null,
-        title,
-        description,
-      })
-    );
-
-    const { data: job, error: jobError } = await supabase
-      .from("jobs")
-      .insert({
-        client_wallet: clientWallet,
-        freelancer_wallet: freelancerWallet || null,
-        title,
-        description,
-        job_hash: jobHash,
-      })
-      .select()
-      .single();
-
-    if (jobError) {
-      throw jobError;
-    }
-
-    let createdMilestones = [];
-    if (Array.isArray(milestones) && milestones.length > 0) {
-      const milestoneRows = milestones.map((milestone) => ({
-        job_id: job.job_id,
-        name: milestone.name,
-        percentage: Number(milestone.percentage),
-        amount: Number(milestone.amount),
-        deadline: milestone.deadline,
-        status: milestone.status || "pending",
-      }));
-
-      const { data, error } = await supabase
-        .from("milestones")
-        .insert(milestoneRows)
-        .select();
-
-      if (error) {
-        throw error;
-      }
-      createdMilestones = data;
-    }
-
-    return res.status(201).json({
-      job,
-      milestones: createdMilestones,
-    });
-  } catch (error) {
-    return internalError(res, error);
-  }
+    const freelancerWallet = freelancer_wallet ? normalizeWallet(freelancer_wallet) : null;
+    const validationError =
+      (!isWalletAddress(clientWallet) && "client_wallet must be a Stellar public key") ||
+      (freelancerWallet && !isWalletAddress(freelancerWallet) && "freelancer_wallet must be a Stellar public key") ||
+      requiredText(title, "title", { min: 3, max: 160 }) || requiredText(description, "description", { min: 10, max: 5000 }) || validateMilestones(milestones);
+    if (validationError) return badRequest(res, validationError);
+    if (clientWallet === freelancerWallet) return badRequest(res, "client and freelancer wallets must be different");
+    const clientProfile = await findProfile(clientWallet);
+    if (!hasRole(clientProfile, "client")) return res.status(403).json({ error: "Client profile is required to create jobs" });
+    if (freelancerWallet && !hasRole(await findProfile(freelancerWallet), "freelancer")) return badRequest(res, "Selected wallet is not registered as a freelancer");
+    const jobHash = sha256(JSON.stringify({ client_wallet: clientWallet, freelancer_wallet: freelancerWallet, title: title.trim(), description: description.trim() }));
+    const normalizedMilestones = milestones.map(({ name, percentage, amount, deadline }) => ({ name: name.trim(), percentage: Number(percentage), amount: Number(amount), deadline }));
+    const { data, error } = await supabase.rpc("create_job_with_milestones", { p_client_wallet: clientWallet, p_freelancer_wallet: freelancerWallet, p_title: title.trim(), p_description: description.trim(), p_job_hash: jobHash, p_milestones: normalizedMilestones });
+    if (error) throw error;
+    return res.status(201).json(data);
+  } catch (error) { return internalError(res, error); }
 });
 
 router.post("/job/:jobId/accept", async (req, res) => {
   try {
-    const { jobId } = req.params;
-    const { freelancer_wallet } = req.body;
-    const freelancerWallet = normalizeWallet(freelancer_wallet);
-    if (!jobId || !freelancerWallet) {
-      return badRequest(res, "jobId and freelancer_wallet are required");
-    }
-
-    const { data: job, error: jobError } = await supabase
-      .from("jobs")
-      .select("*")
-      .eq("job_id", Number(jobId))
-      .single();
-
-    if (jobError) {
-      throw jobError;
-    }
-
-    if (
-      job.freelancer_wallet &&
-      normalizeWallet(job.freelancer_wallet) !== freelancerWallet
-    ) {
-      return res.status(409).json({ error: "Job already accepted by another freelancer" });
-    }
-
-    const { data: freelancerProfile, error: freelancerProfileError } =
-      await supabase
-        .from("users")
-        .select("wallet_address, role")
-        .ilike("wallet_address", freelancerWallet)
-        .single();
-
-    if (freelancerProfileError || !hasRole(freelancerProfile, "freelancer")) {
-      return res.status(403).json({
-        error: "Freelancer identity not found. Register as Freelancer or Both before accepting jobs.",
-      });
-    }
-
-    const { data, error } = await supabase
-      .from("jobs")
-      .update({ freelancer_wallet: freelancerWallet })
-      .eq("job_id", Number(jobId))
-      .select()
-      .single();
-
-    if (error) {
-      throw error;
-    }
-
+    const jobId = positiveId(req.params.jobId);
+    const freelancerWallet = normalizeWallet(req.body?.freelancer_wallet);
+    if (!jobId || !isWalletAddress(freelancerWallet)) return badRequest(res, "jobId and a valid freelancer_wallet are required");
+    if (!hasRole(await findProfile(freelancerWallet), "freelancer")) return res.status(403).json({ error: "Freelancer profile is required to accept jobs" });
+    const { data, error } = await supabase.from("jobs").update({ freelancer_wallet: freelancerWallet }).eq("job_id", jobId).is("freelancer_wallet", null).select().maybeSingle();
+    if (error) throw error;
+    if (!data) return (await findJob(jobId)) ? res.status(409).json({ error: "Job is already assigned" }) : notFound(res, "Job not found");
     return res.json({ job: data });
-  } catch (error) {
-    return internalError(res, error);
-  }
+  } catch (error) { return internalError(res, error); }
 });
 
 router.post("/job/:jobId/reject", async (req, res) => {
   try {
-    const { jobId } = req.params;
-    const { freelancer_wallet } = req.body;
-    const freelancerWallet = normalizeWallet(freelancer_wallet);
-    if (!jobId || !freelancerWallet) {
-      return badRequest(res, "jobId and freelancer_wallet are required");
-    }
-
-    const { data: job, error: jobError } = await supabase
-      .from("jobs")
-      .select("*")
-      .eq("job_id", Number(jobId))
-      .single();
-
-    if (jobError) {
-      throw jobError;
-    }
-
-    if (
-      job.freelancer_wallet &&
-      normalizeWallet(job.freelancer_wallet) !== freelancerWallet
-    ) {
-      return res
-        .status(409)
-        .json({ error: "Cannot reject a job accepted by another freelancer" });
-    }
-
-    const { data, error } = await supabase
-      .from("jobs")
-      .update({ freelancer_wallet: null })
-      .eq("job_id", Number(jobId))
-      .select()
-      .single();
-
-    if (error) {
-      throw error;
-    }
-
+    const jobId = positiveId(req.params.jobId);
+    const freelancerWallet = normalizeWallet(req.body?.freelancer_wallet);
+    if (!jobId || !isWalletAddress(freelancerWallet)) return badRequest(res, "jobId and a valid freelancer_wallet are required");
+    const { data, error } = await supabase.from("jobs").update({ freelancer_wallet: null }).eq("job_id", jobId).eq("freelancer_wallet", freelancerWallet).select().maybeSingle();
+    if (error) throw error;
+    if (!data) return (await findJob(jobId)) ? res.status(409).json({ error: "Only the assigned freelancer can relinquish this job" }) : notFound(res, "Job not found");
     return res.json({ job: data });
-  } catch (error) {
-    return internalError(res, error);
-  }
+  } catch (error) { return internalError(res, error); }
 });
 
 router.post("/milestone/:milestoneId/approve", async (req, res) => {
   try {
-    const { milestoneId } = req.params;
-    const { client_wallet } = req.body;
-    const clientWallet = normalizeWallet(client_wallet);
-
-    if (!milestoneId || !clientWallet) {
-      return badRequest(res, "milestoneId and client_wallet are required");
-    }
-
-    const { data: milestone, error: milestoneError } = await supabase
-      .from("milestones")
-      .select("milestone_id, job_id, status")
-      .eq("milestone_id", Number(milestoneId))
-      .single();
-
-    if (milestoneError) {
-      throw milestoneError;
-    }
-
-    if (milestone.status === "approved") {
-      return res.json({ milestone });
-    }
-
-    if (milestone.status !== "submitted") {
-      return badRequest(res, `Milestone must be submitted before approval. Current status: ${milestone.status}`);
-    }
-
-    const { data: job, error: jobError } = await supabase
-      .from("jobs")
-      .select("job_id, client_wallet")
-      .eq("job_id", milestone.job_id)
-      .single();
-
-    if (jobError) {
-      throw jobError;
-    }
-
-    if (normalizeWallet(job.client_wallet) !== clientWallet) {
-      return res.status(403).json({
-        error: "Only the job client can approve this milestone.",
-      });
-    }
-
-    const { data, error } = await supabase
-      .from("milestones")
-      .update({ status: "approved" })
-      .eq("milestone_id", Number(milestoneId))
-      .select()
-      .single();
-
-    if (error) {
-      throw error;
-    }
-
-    return res.json({ milestone: data });
-  } catch (error) {
-    return internalError(res, error);
-  }
+    const milestoneId = positiveId(req.params.milestoneId);
+    const clientWallet = normalizeWallet(req.body?.client_wallet);
+    if (!milestoneId || !isWalletAddress(clientWallet)) return badRequest(res, "milestoneId and a valid client_wallet are required");
+    const { data, error } = await supabase.rpc("approve_milestone", { p_milestone_id: milestoneId, p_client_wallet: clientWallet });
+    if (error) throw error;
+    if (data?.error === "not_found") return notFound(res, "Milestone not found");
+    if (data?.error === "forbidden") return res.status(403).json({ error: "Only the job client can approve this milestone" });
+    if (data?.error === "invalid_status") return badRequest(res, "Milestone must be submitted before approval");
+    return res.json(data);
+  } catch (error) { return internalError(res, error); }
 });
 
 router.get("/job/:jobId", async (req, res) => {
   try {
-    const { jobId } = req.params;
-    if (!jobId) {
-      return badRequest(res, "jobId is required");
-    }
-
-    const { data: job, error: jobError } = await supabase
-      .from("jobs")
-      .select(JOB_JOIN_SELECT)
-      .eq("job_id", Number(jobId))
-      .single();
-
-    if (jobError) {
-      if (jobError.code === "PGRST116") {
-        return res.status(404).json({ error: "Job not found" });
-      }
-      throw jobError;
-    }
-
-    const { data: milestones, error: milestoneError } = await supabase
-      .from("milestones")
-      .select("*")
-      .eq("job_id", Number(jobId))
-      .order("milestone_id", { ascending: true });
-
-    if (milestoneError) {
-      throw milestoneError;
-    }
-
-    return res.json({ job, milestones });
-  } catch (error) {
-    return internalError(res, error);
-  }
+    const jobId = positiveId(req.params.jobId);
+    if (!jobId) return badRequest(res, "jobId must be a positive integer");
+    const job = await findJob(jobId, JOB_JOIN_SELECT);
+    if (!job) return notFound(res, "Job not found");
+    const { data: milestones, error } = await supabase.from("milestones").select("*").eq("job_id", jobId).order("milestone_id");
+    if (error) throw error;
+    return res.json({ job, milestones: milestones || [] });
+  } catch (error) { return internalError(res, error); }
 });
 
 module.exports = router;

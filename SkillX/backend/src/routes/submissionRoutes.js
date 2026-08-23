@@ -1,90 +1,27 @@
 const express = require("express");
 const { supabase } = require("../config/supabase");
 const { sha256 } = require("../utils/hash");
-const { badRequest, internalError } = require("../utils/http");
+const { badRequest, internalError, notFound } = require("../utils/http");
+const { isWalletAddress, normalizeWallet, positiveId, validateUrl } = require("../utils/validation");
 
 const router = express.Router();
 
 router.post("/submit", async (req, res) => {
   try {
-    const { milestone_id, file_url } = req.body;
-
-    if (!milestone_id || !file_url) {
-      return badRequest(res, "milestone_id and file_url are required");
-    }
-
-    const { data: milestone, error: milestoneFetchError } = await supabase
-      .from("milestones")
-      .select("milestone_id, job_id, status")
-      .eq("milestone_id", milestone_id)
-      .single();
-
-    if (milestoneFetchError) {
-      throw milestoneFetchError;
-    }
-
-    if (milestone.status !== "pending") {
-      return badRequest(res, `Milestone is already ${milestone.status}`);
-    }
-
-    const { data: jobMilestones, error: jobMilestonesError } = await supabase
-      .from("milestones")
-      .select("milestone_id, status")
-      .eq("job_id", milestone.job_id)
-      .order("milestone_id", { ascending: true });
-
-    if (jobMilestonesError) {
-      throw jobMilestonesError;
-    }
-
-    const milestoneIndex = (jobMilestones || []).findIndex(
-      (item) => Number(item.milestone_id) === Number(milestone_id)
-    );
-    const previousIncomplete = (jobMilestones || [])
-      .slice(0, milestoneIndex)
-      .find((item) => item.status !== "approved");
-
-    if (previousIncomplete) {
-      return badRequest(
-        res,
-        "Submit milestones in order. Previous milestones must be approved and paid first."
-      );
-    }
-
-    const submissionHash = sha256(
-      JSON.stringify({
-        milestone_id,
-        file_url
-      })
-    );
-
-    const { data, error } = await supabase
-      .from("submissions")
-      .insert({
-        milestone_id,
-        submission_hash: submissionHash,
-        file_url
-      })
-      .select()
-      .single();
-
-    if (error) {
-      throw error;
-    }
-
-    const { error: milestoneError } = await supabase
-      .from("milestones")
-      .update({ status: "submitted" })
-      .eq("milestone_id", milestone_id);
-
-    if (milestoneError) {
-      throw milestoneError;
-    }
-
-    return res.status(201).json({ submission: data });
-  } catch (error) {
-    return internalError(res, error);
-  }
+    const milestoneId = positiveId(req.body?.milestone_id);
+    const freelancerWallet = normalizeWallet(req.body?.freelancer_wallet);
+    const fileUrlError = validateUrl(req.body?.file_url, "file_url");
+    if (!milestoneId || !isWalletAddress(freelancerWallet) || fileUrlError) return badRequest(res, fileUrlError || "milestone_id and a valid freelancer_wallet are required");
+    const fileUrl = req.body.file_url.trim();
+    const submissionHash = sha256(JSON.stringify({ milestone_id: milestoneId, file_url: fileUrl }));
+    const { data, error } = await supabase.rpc("submit_milestone", { p_milestone_id: milestoneId, p_freelancer_wallet: freelancerWallet, p_file_url: fileUrl, p_submission_hash: submissionHash });
+    if (error) throw error;
+    if (data?.error === "not_found") return notFound(res, "Milestone not found");
+    if (data?.error === "forbidden") return res.status(403).json({ error: "Only the assigned freelancer can submit this milestone" });
+    if (data?.error === "invalid_status") return badRequest(res, "Milestone is not pending");
+    if (data?.error === "previous_incomplete") return badRequest(res, "Submit milestones in order after earlier milestones are approved");
+    return res.status(201).json(data);
+  } catch (error) { return internalError(res, error); }
 });
 
 module.exports = router;
