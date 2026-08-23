@@ -59,7 +59,7 @@ export default function RolePage() {
     <section>
       <h2>{hasProfile ? "Edit Profile" : "Set Up Your Profile"}</h2>
       <p className="subtitle">Use publicly hosted image and portfolio URLs. Image uploads require a dedicated storage service and are intentionally not stored in the database.</p>
-      <form className="grid-form" onSubmit={saveProfile}>
+      <form className="grid-form profile-form" onSubmit={saveProfile}>
         <label>
           Role
           <select value={form.role} onChange={updateField("role")}>

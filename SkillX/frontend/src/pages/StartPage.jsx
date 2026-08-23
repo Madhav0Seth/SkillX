@@ -356,12 +356,9 @@ export default function StartPage() {
     };
   }, []);
 
-  // Wait until both wallet connection AND profile fetching are fully complete
+  // Take user straight to /home as soon as Freighter connects
   if (isConnected && !loading && !profileLoading) {
-    if (hasProfile) {
-      return <Navigate to="/home" replace />;
-    }
-    return <Navigate to="/role" replace />;
+    return <Navigate to="/home" replace />;
   }
 
   return (

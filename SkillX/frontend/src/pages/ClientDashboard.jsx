@@ -4,6 +4,7 @@ import { contracts } from "../services/contracts";
 import { useWallet } from "../context/WalletContext";
 import FreelancerCard from "../components/FreelancerCard";
 import JobCard from "../components/JobCard";
+import WorkspaceSidebar from "../components/WorkspaceSidebar";
 import { getMilestoneStatus } from "../utils/contractStatus";
 const EmptyState = ({ iconType, title, message, action }) => {
   const getIcon = () => {
@@ -102,6 +103,7 @@ function toNumber(value) {
 export default function ClientDashboard() {
   const { address } = useWallet();
   const reviewRef = useRef(null);
+  const [activeTab, setActiveTab] = useState("jobs");
   const [category, setCategory] = useState("");
   const [freelancers, setFreelancers] = useState([]);
   const [title, setTitle] = useState("");
@@ -113,6 +115,8 @@ export default function ClientDashboard() {
   const [selectedMilestones, setSelectedMilestones] = useState([]);
   const [status, setStatus] = useState("");
   const [txHash, setTxHash] = useState("");
+
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   const getStatusType = (msg) => {
     if (!msg) return "info";
@@ -366,7 +370,8 @@ export default function ClientDashboard() {
 
   const useFreelancer = (freelancer) => {
     setFreelancerWallet(freelancer.wallet_address);
-    setStatus(`Selected freelancer ${freelancer.wallet_address}.`);
+    setActiveTab("post");
+    setStatus(`Selected freelancer ${freelancer.wallet_address}. Switched to Post Job.`);
   };
 
   const addMilestone = () =>
@@ -515,219 +520,242 @@ export default function ClientDashboard() {
         <p className="subtitle">Search freelancers, monitor milestones, and release escrow payments on-chain.</p>
       </div>
 
-      {/* SECTION 1: SEARCH & BROWSE TALENT */}
-      <section className="dashboard-section">
-        <header className="section-header">
-          <span className="section-badge">01</span>
-          <h3>Find Freelancers</h3>
-        </header>
+      <div className={`workspace-layout ${!isSidebarOpen ? "is-collapsed" : ""}`}>
+        <WorkspaceSidebar
+          label="Client workspace"
+          activeId={activeTab}
+          onChange={setActiveTab}
+          isOpen={isSidebarOpen}
+          onToggle={() => setIsSidebarOpen((current) => !current)}
+          items={[
+            { id: "jobs", label: "Manage Jobs", icon: <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" strokeWidth="2" fill="none"><rect x="2" y="7" width="20" height="14" rx="2" /><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" /></svg> },
+            { id: "post", label: "Post New Job", icon: <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" strokeWidth="2" fill="none"><path d="M12 5v14M5 12h14" /></svg> },
+            { id: "find", label: "Find Freelancers", icon: <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" strokeWidth="2" fill="none"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg> }
+          ]}
+        />
 
-        <div className="card">
-          <h3>Browse Freelancers by Category</h3>
-          <div className="row-actions">
-            <input
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              placeholder="e.g. react, node, solidity"
-            />
-            <button onClick={browse}>Search</button>
-          </div>
-        </div>
+        <main className="workspace-main">
+          {/* TAB 1: MANAGE ACTIVE JOBS */}
+          {activeTab === "jobs" && (
+            <section className="dashboard-section" style={{ marginTop: 0 }}>
+              <header className="section-header">
+                <span className="section-badge">01</span>
+                <h3>Manage Jobs &amp; Escrow</h3>
+              </header>
 
-        {freelancers.length === 0 ? (
-          <EmptyState
-            iconType="search"
-            title="Browse Qualified Talent"
-            message="Search for skilled freelancers on-chain by entering a programming language, framework, or skillset category above."
-          />
-        ) : (
-          <div className="grid-cards" style={{ marginTop: "1rem" }}>
-            {freelancers.map((freelancer) => (
-              <FreelancerCard
-                key={freelancer.wallet_address}
-                freelancer={freelancer}
-                onSelect={useFreelancer}
-              />
-            ))}
-          </div>
-        )}
-      </section>
+              <div className="card">
+                <h3>Your Previous Jobs</h3>
+                {myJobs.length === 0 ? (
+                  <EmptyState
+                    iconType="jobs"
+                    title="No Jobs Loaded"
+                    message="Load your previous jobs from the database to manage milestones, release payouts, and sync transactions."
+                    action={<button onClick={loadMyJobs} style={{ marginTop: "1rem" }}>Load Previous Jobs</button>}
+                  />
+                ) : (
+                  <div className="grid-cards" style={{ marginTop: "1rem" }}>
+                    {myJobs.map((j) => (
+                      <JobCard
+                        key={j.job_id}
+                        job={j}
+                        onSelect={selectJob}
+                        isSelected={selectedJob?.job_id === j.job_id}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
 
-      {/* SECTION 2: MANAGE ACTIVE JOBS */}
-      <section className="dashboard-section">
-        <header className="section-header">
-          <span className="section-badge">02</span>
-          <h3>Manage Jobs &amp; Escrow</h3>
-        </header>
-
-        <div className="card">
-          <h3>Your Previous Jobs</h3>
-          {myJobs.length === 0 ? (
-            <EmptyState
-              iconType="jobs"
-              title="No Jobs Loaded"
-              message="Load your previous jobs from the database to manage milestones, release payouts, and sync transactions."
-              action={<button onClick={loadMyJobs} style={{ marginTop: "1rem" }}>Load Previous Jobs</button>}
-            />
-          ) : (
-            <div className="grid-cards" style={{ marginTop: "1rem" }}>
-              {myJobs.map((j) => (
-                <JobCard
-                  key={j.job_id}
-                  job={j}
-                  onSelect={selectJob}
-                  isSelected={selectedJob?.job_id === j.job_id}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-
-        {selectedJob && (
-          <div className="card review-milestones-card" ref={reviewRef} style={{ marginTop: "1rem" }}>
-            <div className="section-heading">
-              <h3>Review Job #{selectedJob.job_id}</h3>
-              <span>{selectedMilestones.length} milestones</span>
-            </div>
-            <div className="row-actions">
-              <button className="ghost" onClick={fundSelectedEscrow}>
-                Fund Escrow
-              </button>
-              <span className="inline-muted" style={{ fontWeight: 600, fontSize: "1.05rem", color: "var(--text)" }}>
-                Total Budget: {getMilestoneTotal(selectedMilestones).toLocaleString()} XLM
-              </span>
-            </div>
-            <div className="milestone-payment-list">
-              {selectedMilestones.map((milestone, idx) => (
-                <div className="payment-row milestone-payment-row" key={milestone.milestone_id}>
-                  <div className="milestone-payment-copy">
-                    <strong style={{ fontSize: "1.1rem", color: "var(--text)" }}>#{idx + 1} - {milestone.name}</strong>
-                    <span style={{ fontSize: "0.85rem", color: "var(--muted)" }}>
-                      Status: <span style={{ fontWeight: 600, color: milestone.status === "approved" || milestone.status === "paid" ? "var(--crayon-green)" : milestone.status === "submitted" ? "var(--crayon-blue)" : "var(--crayon-orange)" }}>{milestone.status}</span>
-                      {" "}·{" "}
-                      <strong>{Number(milestone.amount).toLocaleString()} XLM</strong>
+              {selectedJob && (
+                <div className="card review-milestones-card" ref={reviewRef} style={{ marginTop: "1rem" }}>
+                  <div className="section-heading">
+                    <h3>Review Job #{selectedJob.job_id}</h3>
+                    <span>{selectedMilestones.length} milestones</span>
+                  </div>
+                  <div className="row-actions">
+                    <button className="ghost" onClick={fundSelectedEscrow}>
+                      Fund Escrow
+                    </button>
+                    <span className="inline-muted" style={{ fontWeight: 600, fontSize: "1.05rem", color: "var(--text)" }}>
+                      Total Budget: {getMilestoneTotal(selectedMilestones).toLocaleString()} XLM
                     </span>
                   </div>
-                  {milestone.status === "submitted" ? (
-                    <button onClick={() => approveMilestone(milestone)}>
-                      Approve &amp; Pay
+                  <div className="milestone-payment-list">
+                    {selectedMilestones.map((milestone, idx) => (
+                      <div className="payment-row milestone-payment-row" key={milestone.milestone_id}>
+                        <div className="milestone-payment-copy">
+                          <strong style={{ fontSize: "1.1rem", color: "var(--text)" }}>#{idx + 1} - {milestone.name}</strong>
+                          <span style={{ fontSize: "0.85rem", color: "var(--muted)" }}>
+                            Status: <span style={{ fontWeight: 600, color: milestone.status === "approved" || milestone.status === "paid" ? "var(--crayon-green)" : milestone.status === "submitted" ? "var(--crayon-blue)" : "var(--crayon-orange)" }}>{milestone.status}</span>
+                            {" "}·{" "}
+                            <strong>{Number(milestone.amount).toLocaleString()} XLM</strong>
+                          </span>
+                        </div>
+                        {milestone.status === "submitted" ? (
+                          <button onClick={() => approveMilestone(milestone)}>
+                            Approve &amp; Pay
+                          </button>
+                        ) : milestone.status === "approved" ? (
+                          <div className="row-actions">
+                            <span className="status-pill status-pill-completed">
+                              approved
+                            </span>
+                            <button className="ghost" onClick={() => syncApprovedPaymentOnChain(milestone)}>
+                              Sync Payment
+                            </button>
+                          </div>
+                        ) : (
+                          <span className={`status-pill ${milestone.status === "approved" ? "status-pill-completed" : "status-pill-assigned"}`}>
+                            {milestone.status}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </section>
+          )}
+
+          {/* TAB 2: POST A NEW JOB */}
+          {activeTab === "post" && (
+            <section className="dashboard-section" style={{ marginTop: 0 }}>
+              <header className="section-header">
+                <span className="section-badge">02</span>
+                <h3>Post a New Job</h3>
+              </header>
+
+              <form className="grid-form" onSubmit={createJob} style={{ border: "none", boxShadow: "none", padding: 0, background: "transparent" }}>
+                <h3>Create Job with Milestones</h3>
+                <div className="wallet-field-row">
+                  <label style={{ flex: 1, marginBottom: 0 }}>
+                    Freelancer Wallet (optional)
+                    <input
+                      value={freelancerWallet}
+                      onChange={(e) => setFreelancerWallet(e.target.value)}
+                      placeholder="Leave empty to create an open job..."
+                    />
+                  </label>
+                  {freelancerWallet && (
+                    <button
+                      type="button"
+                      className="ghost"
+                      onClick={() => setFreelancerWallet("")}
+                      style={{ height: "50px", padding: "0 1.5rem", whiteSpace: "nowrap" }}
+                    >
+                      Clear Selection
                     </button>
-                  ) : milestone.status === "approved" ? (
-                    <div className="row-actions">
-                      <span className="status-pill status-pill-completed">
-                        approved
-                      </span>
-                      <button className="ghost" onClick={() => syncApprovedPaymentOnChain(milestone)}>
-                        Sync Payment
-                      </button>
-                    </div>
-                  ) : (
-                    <span className={`status-pill ${milestone.status === "approved" ? "status-pill-completed" : "status-pill-assigned"}`}>
-                      {milestone.status}
-                    </span>
                   )}
                 </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </section>
+                <span className="inline-muted" style={{ display: "block", marginBottom: "1.5rem", marginTop: "0.5rem" }}>
+                  Leave the wallet field empty to create an "Open Job" that any freelancer can accept later.
+                </span>
+                <label>
+                  Title
+                  <input value={title} onChange={(e) => setTitle(e.target.value)} required />
+                </label>
+                <label>
+                  Description
+                  <textarea
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    required
+                  />
+                </label>
+                <p className="milestone-help" style={{ marginTop: "1rem", marginBottom: "0.5rem", opacity: 0.8 }}>
+                  Percentages across all milestones must total 100. Amount should match the payout for each milestone.
+                </p>
+                <div className="milestones-table-container">
+                  <div className="milestone-row milestone-header" aria-hidden="true">
+                    <span>Milestone Name</span>
+                    <span>Percentage (%)</span>
+                    <span>Amount</span>
+                    <span>Deadline</span>
+                  </div>
+                  {milestones.map((m, idx) => (
+                    <div className="milestone-row" key={`milestone-${idx}`}>
+                      <input
+                        placeholder="Milestone name"
+                        value={m.name}
+                        onChange={(e) => updateMilestone(idx, "name", e.target.value)}
+                        required
+                      />
+                      <input
+                        type="number"
+                        placeholder="Percentage"
+                        value={m.percentage}
+                        onChange={(e) =>
+                          updateMilestone(idx, "percentage", Number(e.target.value))
+                        }
+                        required
+                      />
+                      <input
+                        type="number"
+                        placeholder="Amount"
+                        value={m.amount}
+                        onChange={(e) => updateMilestone(idx, "amount", Number(e.target.value))}
+                        required
+                      />
+                      <input
+                        type="date"
+                        value={m.deadline}
+                        onChange={(e) => updateMilestone(idx, "deadline", e.target.value)}
+                        required
+                      />
+                    </div>
+                  ))}
+                </div>
+                <div className="row-actions">
+                  <button type="button" className="ghost" onClick={addMilestone}>
+                    + Add Milestone
+                  </button>
+                  <button type="submit">Create Job</button>
+                </div>
+              </form>
+            </section>
+          )}
 
-      {/* SECTION 3: POST A NEW JOB */}
-      <section className="dashboard-section">
-        <header className="section-header">
-          <span className="section-badge">03</span>
-          <h3>Post a New Job</h3>
-        </header>
+          {/* TAB 3: FIND FREELANCERS */}
+          {activeTab === "find" && (
+            <section className="dashboard-section" style={{ marginTop: 0 }}>
+              <header className="section-header">
+                <span className="section-badge">03</span>
+                <h3>Find Freelancers</h3>
+              </header>
 
-        <form className="grid-form" onSubmit={createJob} style={{ border: "none", boxShadow: "none", padding: 0, background: "transparent" }}>
-          <h3>Create Job with Milestones</h3>
-          <div className="wallet-field-row">
-            <label style={{ flex: 1, marginBottom: 0 }}>
-              Freelancer Wallet (optional)
-              <input
-                value={freelancerWallet}
-                onChange={(e) => setFreelancerWallet(e.target.value)}
-                placeholder="Leave empty to create an open job..."
-              />
-            </label>
-            {freelancerWallet && (
-              <button
-                type="button"
-                className="ghost"
-                onClick={() => setFreelancerWallet("")}
-                style={{ height: "50px", padding: "0 1.5rem", whiteSpace: "nowrap" }}
-              >
-                Clear Selection
-              </button>
-            )}
-          </div>
-          <span className="inline-muted" style={{ display: "block", marginBottom: "1.5rem", marginTop: "0.5rem" }}>
-            Leave the wallet field empty to create an "Open Job" that any freelancer can accept later.
-          </span>
-          <label>
-            Title
-            <input value={title} onChange={(e) => setTitle(e.target.value)} required />
-          </label>
-          <label>
-            Description
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              required
-            />
-          </label>
-          <p className="milestone-help" style={{ marginTop: "1rem", marginBottom: "0.5rem", opacity: 0.8 }}>
-            Percentages across all milestones must total 100. Amount should match the payout for each milestone.
-          </p>
-          <div className="milestones-table-container">
-            <div className="milestone-row milestone-header" aria-hidden="true">
-              <span>Milestone Name</span>
-              <span>Percentage (%)</span>
-              <span>Amount</span>
-              <span>Deadline</span>
-            </div>
-            {milestones.map((m, idx) => (
-              <div className="milestone-row" key={`milestone-${idx}`}>
-                <input
-                  placeholder="Milestone name"
-                  value={m.name}
-                  onChange={(e) => updateMilestone(idx, "name", e.target.value)}
-                  required
-                />
-                <input
-                  type="number"
-                  placeholder="Percentage"
-                  value={m.percentage}
-                  onChange={(e) =>
-                    updateMilestone(idx, "percentage", Number(e.target.value))
-                  }
-                  required
-                />
-                <input
-                  type="number"
-                  placeholder="Amount"
-                  value={m.amount}
-                  onChange={(e) => updateMilestone(idx, "amount", Number(e.target.value))}
-                  required
-                />
-                <input
-                  type="date"
-                  value={m.deadline}
-                  onChange={(e) => updateMilestone(idx, "deadline", e.target.value)}
-                  required
-                />
+              <div className="card">
+                <h3>Browse Freelancers by Category</h3>
+                <div className="row-actions">
+                  <input
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                    placeholder="e.g. react, node, solidity"
+                  />
+                  <button onClick={browse}>Search</button>
+                </div>
               </div>
-            ))}
-          </div>
-          <div className="row-actions">
-            <button type="button" className="ghost" onClick={addMilestone}>
-              + Add Milestone
-            </button>
-            <button type="submit">Create Job</button>
-          </div>
-        </form>
-      </section>
+
+              {freelancers.length === 0 ? (
+                <EmptyState
+                  iconType="search"
+                  title="Browse Qualified Talent"
+                  message="Search for skilled freelancers on-chain by entering a programming language, framework, or skillset category above."
+                />
+              ) : (
+                <div className="grid-cards" style={{ marginTop: "1rem" }}>
+                  {freelancers.map((freelancer) => (
+                    <FreelancerCard
+                      key={freelancer.wallet_address}
+                      freelancer={freelancer}
+                      onSelect={useFreelancer}
+                    />
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
+        </main>
+      </div>
 
       {status && (
         <div className="status-modal-overlay" onClick={handleDismiss}>

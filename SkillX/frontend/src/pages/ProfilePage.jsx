@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useWallet } from "../context/WalletContext";
 import JobCard from "../components/JobCard";
 import { api } from "../services/api";
@@ -91,6 +91,7 @@ const STAT_CONFIG = [
 export default function ProfilePage() {
   const { address, profile, connectWallet, loading: walletLoading } = useWallet();
   const walletAddress = normalizeWallet(address);
+  const navigate = useNavigate();
   const [clientJobs, setClientJobs] = useState([]);
   const [freelancerJobs, setFreelancerJobs] = useState([]);
   const [xlmBalance, setXlmBalance] = useState("");
@@ -99,6 +100,11 @@ export default function ProfilePage() {
   const [status, setStatus] = useState("");
   const [stats, setStats] = useState(null);
   const [statsLoading, setStatsLoading] = useState(false);
+
+  const handleConnect = async () => {
+    await connectWallet();
+    navigate("/home");
+  };
 
   const loadBalance = async () => {
     if (!walletAddress) {
@@ -175,7 +181,19 @@ export default function ProfilePage() {
   const reputation = stats?.reputation || profile?.reputation || null;
 
   return (
-    <div className="profile-layout">
+    <div className="profile-page">
+      <header className="profile-page-header">
+        <div>
+          <span className="home-kicker">Your workspace</span>
+          <h1>Profile &amp; activity</h1>
+          <p>Keep your skills, portfolio, and public profile up to date.</p>
+        </div>
+        <Link className="btn-link profile-edit-action" to="/role">
+          {profile ? "Edit Profile" : "Set Up Profile"}
+        </Link>
+      </header>
+
+      <div className="profile-layout">
       {/* ── Native Disconnected Wallet Card ── */}
       {!walletAddress && (
         <div className="card" style={{ gridColumn: "1 / -1", padding: "2rem" }}>
@@ -184,7 +202,7 @@ export default function ProfilePage() {
           <p style={{ margin: "0 0 1.2rem", color: "var(--muted)", maxWidth: "550px" }}>
             Connect your Stellar wallet to view your on-chain reputation, escrow balance, and account activity.
           </p>
-          <button onClick={connectWallet} disabled={walletLoading}>
+          <button onClick={handleConnect} disabled={walletLoading}>
             {walletLoading ? "Connecting..." : "Connect Freighter"}
           </button>
         </div>
@@ -346,7 +364,8 @@ export default function ProfilePage() {
         </div>
       </main>
 
-      {status && <p className="status" style={{ gridColumn: "1 / -1" }}>{status}</p>}
+        {status && <p className="status" style={{ gridColumn: "1 / -1" }}>{status}</p>}
+      </div>
     </div>
   );
 }

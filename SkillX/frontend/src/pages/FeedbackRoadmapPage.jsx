@@ -16,6 +16,35 @@ export default function FeedbackRoadmapPage() {
 
   return (
     <div className="feedback-board feedback-progress-page">
+      <section className="feedback-form-section" aria-labelledby="feedback-form-title">
+        <div className="feedback-form-copy" style={{ marginBottom: '2.5rem' }}>
+          <span className="home-kicker">Feedback</span>
+          <h1 id="feedback-form-title">We appreciate your feedback!</h1>
+          <p>
+            Help shape the future of SkillX. Your thoughts, suggestions, and feature requests are highly valued by our team as we continue to build out the platform.
+          </p>
+        </div>
+        <a
+          className="feedback-form-link"
+          href="https://docs.google.com/forms/d/e/1FAIpQLSffAdXqPWPjtufDt_UxySfMGKZCTgQSbW9UiDb0Wv4VFNiFYg/viewform?usp=publish-editor"
+          target="_blank"
+          rel="noreferrer"
+          style={{
+            display: 'inline-block',
+            padding: '1rem 2rem',
+            background: 'var(--primary)',
+            color: 'white',
+            borderRadius: 'var(--radius)',
+            textDecoration: 'none',
+            fontWeight: '700',
+            fontSize: '1.1rem',
+            boxShadow: '4px 4px 0 var(--border)'
+          }}
+        >
+          Open Feedback Form
+        </a>
+      </section>
+
       <header className="feedback-board-hero">
         <span className="home-kicker">Feedback & Product Roadmap</span>
         <h1>What is open.<br /><span>What has shipped.</span></h1>
@@ -64,4 +93,3 @@ export default function FeedbackRoadmapPage() {
     </div>
   );
 }
-

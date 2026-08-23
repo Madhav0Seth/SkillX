@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useWallet } from "../context/WalletContext";
 
 function shortAddress(value) {
@@ -19,6 +19,13 @@ export default function Header({ theme, onToggleTheme }) {
   const { address, balance, isConnected, connectWallet, disconnectWallet, loading, role, hasProfile, profile } =
     useWallet();
   const [isOpen, setIsOpen] = useState(false);
+  const navigate = useNavigate();
+
+  const handleConnect = async () => {
+    setIsOpen(false);
+    await connectWallet();
+    navigate("/home");
+  };
 
   // Show nav links based on registered role
   const showClient = role === "client" || role === "both";
@@ -44,29 +51,18 @@ export default function Header({ theme, onToggleTheme }) {
 
       <div className={`topbar-menu ${isOpen ? "open" : ""}`}>
         <nav className="navlinks">
-          <Link to="/marketplace" onClick={() => setIsOpen(false)}>Marketplace</Link>
-          <Link to="/roadmap" onClick={() => setIsOpen(false)}>Roadmap</Link>
+          {!isConnected && <Link to="/marketplace" onClick={() => setIsOpen(false)}>Marketplace</Link>}
+          <Link to="/roadmap" onClick={() => setIsOpen(false)}>Feedback</Link>
           <Link to="/profile" onClick={() => setIsOpen(false)}>Profile</Link>
           {isConnected && (
             <>
-              <Link to="/home" onClick={() => setIsOpen(false)}>Home</Link>
-              {showClient && <Link to="/client" onClick={() => setIsOpen(false)}>Client</Link>}
-              {showFreelancer && <Link to="/freelancer" onClick={() => setIsOpen(false)}>Freelancer</Link>}
-              <Link to="/role" onClick={() => setIsOpen(false)}>{hasProfile ? "Edit Role" : "Set Role"}</Link>
+              <Link to="/client" onClick={() => setIsOpen(false)}>Client</Link>
+              <Link to="/freelancer" onClick={() => setIsOpen(false)}>Freelancer</Link>
             </>
           )}
         </nav>
 
         <div className="walletbox">
-          <a
-            className="feedback-btn"
-            href="https://docs.google.com/forms/d/e/1FAIpQLSffAdXqPWPjtufDt_UxySfMGKZCTgQSbW9UiDb0Wv4VFNiFYg/viewform?usp=publish-editor"
-            target="_blank"
-            rel="noreferrer"
-            title="Give Product Feedback"
-          >
-            <span className="feedback-btn-icon">💬</span> Feedback
-          </a>
           <button className="ghost theme-toggle" onClick={onToggleTheme} aria-label="Toggle theme">
             {theme === "dark" ? "☀️" : "🌙"}
           </button>
@@ -88,7 +84,7 @@ export default function Header({ theme, onToggleTheme }) {
               <button onClick={() => { disconnectWallet(); setIsOpen(false); }}>Disconnect</button>
             </>
           ) : (
-            <button onClick={() => { connectWallet(); setIsOpen(false); }} disabled={loading}>
+            <button onClick={handleConnect} disabled={loading}>
               {loading ? "Connecting..." : "Connect Freighter"}
             </button>
           )}

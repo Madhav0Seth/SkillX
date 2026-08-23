@@ -3,6 +3,7 @@ import { api } from "../services/api";
 import { contracts } from "../services/contracts";
 import { useWallet } from "../context/WalletContext";
 import JobCard from "../components/JobCard";
+import WorkspaceSidebar from "../components/WorkspaceSidebar";
 import { getJobStatus, getMilestoneStatus } from "../utils/contractStatus";
 
 
@@ -198,6 +199,8 @@ export default function FreelancerDashboard() {
   const [fileUrl, setFileUrl] = useState("");
   const [status, setStatus] = useState("");
   const [txHash, setTxHash] = useState("");
+  const [activeTab, setActiveTab] = useState("ongoing");
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   const openJobsRef = useRef(null);
   const assignedJobsRef = useRef(null);
@@ -693,43 +696,63 @@ export default function FreelancerDashboard() {
 
   return (
     <div className="dashboard-container">
-      <div className="dashboard-header">
-        <h2>Freelancer Dashboard</h2>
-        <p className="subtitle">Accept open jobs, submit milestones, and check on-chain payments.</p>
-      </div>
+      <div className={`workspace-layout ${!isSidebarOpen ? "is-collapsed" : ""}`}>
+        <WorkspaceSidebar
+          label="Freelancer workspace"
+          activeId={activeTab}
+          onChange={(tab) => {
+            setActiveTab(tab);
+            if (tab === "open") loadOpenJobs();
+            else loadMyJobs();
+          }}
+          isOpen={isSidebarOpen}
+          onToggle={() => setIsSidebarOpen((current) => !current)}
+          items={[
+            { id: "ongoing", label: "My Jobs", icon: <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" strokeWidth="2" fill="none"><path d="M4 7h16v13H4z" /><path d="M8 7V5a4 4 0 0 1 8 0v2" /><path d="M4 12h16" /></svg> },
+            { id: "open", label: "Open Jobs", icon: <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" strokeWidth="2" fill="none"><circle cx="11" cy="11" r="7" /><path d="m16 16 4 4" /></svg> }
+          ]}
+        />
 
-      {/* SECTION 1: SEARCH & LOAD JOBS */}
-      <section className="dashboard-section">
-        <header className="section-header">
-          <span className="section-badge">01</span>
-          <h3>Job Controls</h3>
-        </header>
-
-        <div className="card" style={{ border: "none", boxShadow: "none", padding: 0, background: "transparent", gap: "1rem" }}>
-          <h3>Load and Filter Jobs</h3>
-          <div className="row-actions">
-            <button onClick={loadMyJobs}>View My Jobs</button>
-            <button className="ghost" onClick={loadOpenJobs}>View Open Jobs</button>
-            <input
-              value={jobId}
-              onChange={(e) => setJobId(e.target.value)}
-              placeholder="Enter job ID"
-            />
-            <button onClick={loadJob}>Load Job</button>
+        <main className="workspace-main">
+          <div className="dashboard-header">
+            <h2>Freelancer Dashboard</h2>
+            <p className="subtitle">Accept open jobs, submit milestones, and check on-chain payments.</p>
           </div>
-        </div>
-      </section>
 
-      {/* SECTION 2: WORKSPACE */}
-      <section className="dashboard-section">
-        <header className="section-header">
-          <span className="section-badge">02</span>
-          <h3>Freelancer Workspace</h3>
-        </header>
+          {/* SECTION 1: SEARCH & LOAD JOBS */}
+          <section className="dashboard-section" style={{ marginTop: 0 }}>
+            <header className="section-header">
+              <span className="section-badge">01</span>
+              <h3>Job Controls</h3>
+            </header>
 
-        <div className="freelancer-workspace">
-          <div className="job-list-pane">
-            <div className="workspace-card-section" ref={assignedJobsRef}>
+            <div className="card" style={{ border: "none", boxShadow: "none", padding: 0, background: "transparent", gap: "1rem" }}>
+              <h3>Load and Filter Jobs</h3>
+              <div className="row-actions">
+                <button onClick={() => { setActiveTab("ongoing"); loadMyJobs(); }}>View My Jobs</button>
+                <button className="ghost" onClick={() => { setActiveTab("open"); loadOpenJobs(); }}>View Open Jobs</button>
+                <input
+                  value={jobId}
+                  onChange={(e) => setJobId(e.target.value)}
+                  placeholder="Enter job ID"
+                />
+                <button onClick={() => { setActiveTab("ongoing"); loadJob(); }}>Load Job</button>
+              </div>
+            </div>
+          </section>
+
+          {/* SECTION 2: WORKSPACE */}
+          <section className="dashboard-section">
+            <header className="section-header">
+              <span className="section-badge">02</span>
+              <h3>Freelancer Workspace</h3>
+            </header>
+
+            <div className="freelancer-workspace">
+              <div className="job-list-pane">
+                {activeTab === "ongoing" && (
+                  <>
+                    <div className="workspace-card-section" ref={assignedJobsRef}>
               <div className="section-heading">
                 <h3>Assigned to Me</h3>
                 <span>{assignedJobs.length} jobs</span>
@@ -787,8 +810,12 @@ export default function FreelancerDashboard() {
               )}
             </div>
 
-            <div className="workspace-card-section" ref={openJobsRef}>
-              <div className="section-heading">
+                </>
+              )}
+
+              {activeTab === "open" && (
+                <div className="workspace-card-section" ref={openJobsRef}>
+                  <div className="section-heading">
                 <h3>Open Jobs</h3>
                 <span>{openJobs.length} jobs</span>
               </div>
@@ -813,8 +840,9 @@ export default function FreelancerDashboard() {
                   action={<button className="ghost" onClick={loadOpenJobs} style={{ marginTop: "1rem" }}>View Open Jobs</button>}
                 />
               )}
+                </div>
+              )}
             </div>
-          </div>
 
           <aside className="job-detail-pane" ref={detailPaneRef}>
             {job ? (
@@ -937,6 +965,8 @@ export default function FreelancerDashboard() {
           </aside>
         </div>
       </section>
+    </main>
+  </div>
       {status && (
         <div className="status-modal-overlay" onClick={handleDismiss}>
           <div className="status-modal-content" onClick={(e) => e.stopPropagation()}>
