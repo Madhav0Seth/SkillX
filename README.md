@@ -12,8 +12,7 @@ SkillX is a decentralized freelance marketplace built on Stellar Testnet. Client
 | Live app | [skill-x-nu.vercel.app](https://skill-x-nu.vercel.app/) |
 | Public Job Marketplace | [skill-x-nu.vercel.app/marketplace](https://skill-x-nu.vercel.app/marketplace) |
 | Backend API | [skillx-tqzb.onrender.com](https://skillx-tqzb.onrender.com) |
-| User Feedback Google Form | [SkillX Feedback Form](https://forms.google.com) |
-| Exported 50+ User Responses (CSV) | [user_onboarding_responses.csv](./user_onboarding_responses.csv) |
+| User Feedback Google Form | [SkillX Feedback Form](https://docs.google.com/forms/d/e/1FAIpQLSffAdXqPWPjtufDt_UxySfMGKZCTgQSbW9UiDb0Wv4VFNiFYg/viewform?usp=publish-editor) |
 | Demo video | [YouTube demo](https://www.youtube.com/watch?v=SfhH32hAEAw) |
 
 ## Preview
@@ -43,10 +42,9 @@ SkillX is a decentralized freelance marketplace built on Stellar Testnet. Client
 
 ## 🔵 Level 5 Blue Belt — User Growth & Feedback Analysis
 
-As part of Level 5 requirements, we conducted a comprehensive user onboarding campaign collecting testnet wallet addresses, email contacts, full names, role choices, rating scores (1-5), and feedback from 50+ testnet users.
+As part of Level 5 requirements, we conducted a comprehensive user onboarding campaign collecting testnet wallet addresses, email contacts, full names, role choices, rating scores (1-5), and feedback from testnet users.
 
-- **Google Feedback Form:** [SkillX User Feedback Form](https://forms.google.com)
-- **Exported Dataset (50+ Testnet Users):** [user_onboarding_responses.csv](./user_onboarding_responses.csv)
+- **Google Feedback Form:** [SkillX User Feedback Form](https://docs.google.com/forms/d/e/1FAIpQLSffAdXqPWPjtufDt_UxySfMGKZCTgQSbW9UiDb0Wv4VFNiFYg/viewform?usp=publish-editor)
 
 ### 📈 Feedback Summary & Product Iterations
 
@@ -200,7 +198,6 @@ SkillX/
 │   └── reputation/
 ├── frontend/
 │   └── src/
-├── user_onboarding_responses.csv
 └── Cargo.toml
 ```
 

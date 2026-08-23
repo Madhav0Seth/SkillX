@@ -51,7 +51,7 @@ export default function FeedbackModal({ isOpen, onClose }) {
             <p style={{ fontSize: "0.9rem", color: "var(--muted)", margin: 0 }}>
               Help us refine SkillX! Submit feedback directly below or access our official{" "}
               <a
-                href="https://forms.google.com"
+                href="https://docs.google.com/forms/d/e/1FAIpQLSffAdXqPWPjtufDt_UxySfMGKZCTgQSbW9UiDb0Wv4VFNiFYg/viewform?usp=publish-editor"
                 target="_blank"
                 rel="noreferrer"
                 style={{ color: "var(--crayon-blue)", textDecoration: "underline" }}
