@@ -12,10 +12,20 @@ const FreelancerDashboard = lazy(() => import("./pages/FreelancerDashboard"));
 const ProfilePage = lazy(() => import("./pages/ProfilePage"));
 const FeedbackRoadmapPage = lazy(() => import("./pages/FeedbackRoadmapPage"));
 
-function ProtectedRoute({ children }) {
-  const { isConnected } = useWallet();
+function ProtectedRoute({ children, requiredRole }) {
+  const { isConnected, role, profileLoading } = useWallet();
   if (!isConnected) {
     return <Navigate to="/" replace />;
+  }
+  if (requiredRole) {
+    // Wait for the profile/role to finish loading before deciding.
+    if (profileLoading) {
+      return <p className="empty-state" role="status">Loading…</p>;
+    }
+    const allowed = role === requiredRole || role === "both";
+    if (!allowed) {
+      return <Navigate to="/home" replace />;
+    }
   }
   return children;
 }
@@ -58,7 +68,7 @@ export default function App() {
           <Route
             path="/client"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute requiredRole="client">
                 <ClientDashboard />
               </ProtectedRoute>
             }
@@ -66,7 +76,7 @@ export default function App() {
           <Route
             path="/freelancer"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute requiredRole="freelancer">
                 <FreelancerDashboard />
               </ProtectedRoute>
             }

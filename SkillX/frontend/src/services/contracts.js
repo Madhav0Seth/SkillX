@@ -254,6 +254,74 @@ export const contracts = {
     );
   },
 
+  /**
+   * Atomically create a job, fund escrow, and register milestones in a
+   * SINGLE on-chain transaction (one Freighter signature instead of three).
+   *
+   * Calls JobManager.create_full_job(...). The single signed transaction
+   * carries the sub-invocation auth for the escrow deposit (token transfer)
+   * and the milestone registration, so the client approves everything once.
+   */
+  async createFullJobOnChain({
+    jobIdHex,
+    jobHashHex,
+    clientAddress,
+    freelancerAddress,
+    totalAmount,
+    milestoneHashesHex,
+    milestonePercentages,
+    milestoneDeadlines,
+  }) {
+    ensureStellarAddress(clientAddress);
+    ensureStellarAddress(freelancerAddress);
+    return buildAndSendContractTx(
+      jobManagerContractId,
+      "VITE_JOB_MANAGER_CONTRACT_ID",
+      "create_full_job",
+      [
+        hexToBytesScVal(jobIdHex),
+        hexToBytesScVal(jobHashHex),
+        Address.fromString(clientAddress).toScVal(),
+        Address.fromString(freelancerAddress).toScVal(),
+        nativeToScVal(totalAmount, { type: "i128" }),
+        xdr.ScVal.scvVec((milestoneHashesHex || []).map((h) => hexToBytesScVal(h))),
+        xdr.ScVal.scvVec(
+          (milestonePercentages || []).map((p) => nativeToScVal(p, { type: "u32" }))
+        ),
+        xdr.ScVal.scvVec(
+          (milestoneDeadlines || []).map((d) => nativeToScVal(d, { type: "u64" }))
+        ),
+      ],
+      { expectedSigner: clientAddress }
+    );
+  },
+
+  /**
+   * Post a TRUE Open job in a SINGLE client transaction: create the job and
+   * fund its escrow, WITHOUT registering milestones (no freelancer is known
+   * yet). Calls JobManager.create_and_fund_job(...).
+   *
+   * Milestones are registered later, once a freelancer has accepted, via
+   * addMilestonesOnChain (a separate client-signed transaction) — because
+   * MilestoneManager.add_milestones requires the CLIENT's auth and cannot be
+   * satisfied inside the freelancer's accept transaction.
+   */
+  async createAndFundJobOnChain({ jobIdHex, jobHashHex, clientAddress, totalAmount }) {
+    ensureStellarAddress(clientAddress);
+    return buildAndSendContractTx(
+      jobManagerContractId,
+      "VITE_JOB_MANAGER_CONTRACT_ID",
+      "create_and_fund_job",
+      [
+        hexToBytesScVal(jobIdHex),
+        hexToBytesScVal(jobHashHex),
+        Address.fromString(clientAddress).toScVal(),
+        nativeToScVal(totalAmount, { type: "i128" }),
+      ],
+      { expectedSigner: clientAddress }
+    );
+  },
+
   async acceptJobOnChain(jobIdHex, freelancerAddress) {
     ensureStellarAddress(freelancerAddress);
     return buildAndSendContractTx(
@@ -263,6 +331,28 @@ export const contracts = {
       [
         hexToBytesScVal(jobIdHex),
         Address.fromString(freelancerAddress).toScVal()
+      ],
+      { expectedSigner: freelancerAddress }
+    );
+  },
+
+  /**
+   * Atomically accept the job (if not already accepted) AND submit the
+   * milestone in a SINGLE transaction → one Freighter signature for the
+   * freelancer instead of two (accept_job + submit_milestone).
+   * Idempotent: if the job is already InProgress and assigned to this
+   * freelancer, it skips acceptance and just submits.
+   */
+  async acceptAndSubmitOnChain(jobIdHex, milestoneIndex, freelancerAddress) {
+    ensureStellarAddress(freelancerAddress);
+    return buildAndSendContractTx(
+      jobManagerContractId,
+      "VITE_JOB_MANAGER_CONTRACT_ID",
+      "accept_and_submit",
+      [
+        hexToBytesScVal(jobIdHex),
+        Address.fromString(freelancerAddress).toScVal(),
+        nativeToScVal(milestoneIndex, { type: "u32" }),
       ],
       { expectedSigner: freelancerAddress }
     );
@@ -348,6 +438,25 @@ export const contracts = {
       milestoneManagerContractId,
       "VITE_MILESTONE_MANAGER_CONTRACT_ID",
       "approve_milestone",
+      [
+        hexToBytesScVal(jobIdHex),
+        nativeToScVal(milestoneIndex, { type: "u32" })
+      ],
+      clientAddress ? { expectedSigner: clientAddress } : {}
+    );
+  },
+
+  /**
+   * Atomically top up escrow (only if the balance is short) AND approve the
+   * milestone in a SINGLE transaction → one Freighter signature for the
+   * client instead of two (deposit + approve_milestone). If escrow is already
+   * fully funded (the normal case after create_full_job), no deposit happens.
+   */
+  async fundAndApproveOnChain(jobIdHex, milestoneIndex, clientAddress) {
+    return buildAndSendContractTx(
+      milestoneManagerContractId,
+      "VITE_MILESTONE_MANAGER_CONTRACT_ID",
+      "fund_and_approve",
       [
         hexToBytesScVal(jobIdHex),
         nativeToScVal(milestoneIndex, { type: "u32" })

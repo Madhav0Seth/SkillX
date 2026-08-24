@@ -55,6 +55,7 @@ As part of Level 5 requirements, we conducted a comprehensive user onboarding ca
 | *"Mobile dashboard layout needed polish"* | Complete mobile responsive overhaul for all pages | [`feat: enhance responsive design`](https://github.com/Madhav0Seth/SkillX/commit/4086bf1) |
 | *"Star ratings & reviews after job completion"* | Connected deployed Soroban Reputation smart contract | [`feat: add reputation contract`](https://github.com/Madhav0Seth/SkillX/commit/c101bcf) |
 | *"Show platform statistics on landing page"* | Animated live platform statistics overview | [`feat: implement user profile popups`](https://github.com/Madhav0Seth/SkillX/commit/85e041b) |
+| *"Too many wallet transactions to post a job / approve work"* | Merged multi-step on-chain flows into single atomic transactions (one wallet signature per action) via new `create_full_job`, `accept_and_submit`, and `fund_and_approve` contract entrypoints | [`feat: batch on-chain flows into single transactions`](https://github.com/Madhav0Seth/SkillX/commit/main) |
 
 ### 🚀 Future Roadmap (Level 6 & Beyond)
 
@@ -68,12 +69,12 @@ As part of Level 5 requirements, we conducted a comprehensive user onboarding ca
 
 All contracts are deployed on Stellar Testnet.
 
-| Contract | Contract ID | Stellar Expert |
-| --- | --- | --- |
-| Escrow | `CBKNB7YVVSHQMUH5DO63TIPLXZTVEIKITYSRUSTGKX2KQRXWYDJMNXNT` | [View contract](https://stellar.expert/explorer/testnet/contract/CBKNB7YVVSHQMUH5DO63TIPLXZTVEIKITYSRUSTGKX2KQRXWYDJMNXNT) |
-| Job Manager | `CA7QPCOMXCEJ25EZ7XTTQ25IR6HK4CBUUG55GZGNKRCGJBIDEXHEYMKU` | [View contract](https://stellar.expert/explorer/testnet/contract/CA7QPCOMXCEJ25EZ7XTTQ25IR6HK4CBUUG55GZGNKRCGJBIDEXHEYMKU) |
-| Milestone Manager | `CDZ45H32U5YDEGKGBOWFFRY5XF73IE5TNGLM5UMYUIJUFIBONHZY5OZK` | [View contract](https://stellar.expert/explorer/testnet/contract/CDZ45H32U5YDEGKGBOWFFRY5XF73IE5TNGLM5UMYUIJUFIBONHZY5OZK) |
-| Reputation | `CAKQDKSSNVVBLBCHHL22Q3PDZ6VDGAUM2ERND4OKJ2VCL6JDDL4YZSUN` | [View contract](https://stellar.expert/explorer/testnet/contract/CAKQDKSSNVVBLBCHHL22Q3PDZ6VDGAUM2ERND4OKJ2VCL6JDDL4YZSUN) |
+| Contract | Contract ID | WASM Hash | Deploy Tx | Stellar Expert |
+| --- | --- | --- | --- | --- |
+| Escrow | `CCPSEXCCYNIEYIDHZA774T6WQM3KXTLTETOI762G4USMTYFZXTVJKI4B` | `06ee004b4104f104c21ebe46b93a322af9c8babad2ced2d34ec8b0c66e39b55b` | [`59bff661…`](https://stellar.expert/explorer/testnet/tx/59bff6612635d8a51c085a508411196a7e5ec0ed9dc686ea2152b9fda3014168) | [View contract](https://stellar.expert/explorer/testnet/contract/CCPSEXCCYNIEYIDHZA774T6WQM3KXTLTETOI762G4USMTYFZXTVJKI4B) |
+| Job Manager | `CB7YQMFJIKEEK3G4554JGDH3EIKJY3VN4ZT7CSDEKLH6WCECOV727IWC` | `fc4a183a498852211ffb40e35b684901a1844e569e3f400c5fd5c5ec18c1d9c3` | [`eb85365c…`](https://stellar.expert/explorer/testnet/tx/eb85365c5628875e70cfdafccc0f83405ab0516a71b02ab1cf145e158cd770b0) | [View contract](https://stellar.expert/explorer/testnet/contract/CB7YQMFJIKEEK3G4554JGDH3EIKJY3VN4ZT7CSDEKLH6WCECOV727IWC) |
+| Milestone Manager | `CDSVTVOJET5YEVYXDOUHCQKA7C7PBSSYFMM3HS4NQVX3EAWCZIZWZMZ4` | `4b805f1c38afba1529f6c2e9913c17253cb8f93a10214aeedb5feed17b72b2e3` | [`5cfe68f9…`](https://stellar.expert/explorer/testnet/tx/5cfe68f97262fab025e6615401ebd75c87b7c20229bbce5a43a34cc3ff8c781b) | [View contract](https://stellar.expert/explorer/testnet/contract/CDSVTVOJET5YEVYXDOUHCQKA7C7PBSSYFMM3HS4NQVX3EAWCZIZWZMZ4) |
+| Reputation | `CAKQDKSSNVVBLBCHHL22Q3PDZ6VDGAUM2ERND4OKJ2VCL6JDDL4YZSUN` | — | — | [View contract](https://stellar.expert/explorer/testnet/contract/CAKQDKSSNVVBLBCHHL22Q3PDZ6VDGAUM2ERND4OKJ2VCL6JDDL4YZSUN) |
 
 ### Stellar Expert Proof
 
@@ -247,9 +248,10 @@ Create `SkillX/frontend/.env`:
 VITE_API_BASE_URL=http://localhost:4000
 VITE_SOROBAN_RPC_URL=https://soroban-testnet.stellar.org
 VITE_NETWORK_PASSPHRASE=Test SDF Network ; September 2015
-VITE_ESCROW_CONTRACT_ID=CBKNB7YVVSHQMUH5DO63TIPLXZTVEIKITYSRUSTGKX2KQRXWYDJMNXNT
-VITE_JOB_MANAGER_CONTRACT_ID=CA7QPCOMXCEJ25EZ7XTTQ25IR6HK4CBUUG55GZGNKRCGJBIDEXHEYMKU
-VITE_MILESTONE_MANAGER_CONTRACT_ID=CDZ45H32U5YDEGKGBOWFFRY5XF73IE5TNGLM5UMYUIJUFIBONHZY5OZK
+VITE_ESCROW_CONTRACT_ID=CCPSEXCCYNIEYIDHZA774T6WQM3KXTLTETOI762G4USMTYFZXTVJKI4B
+VITE_JOB_MANAGER_CONTRACT_ID=CB7YQMFJIKEEK3G4554JGDH3EIKJY3VN4ZT7CSDEKLH6WCECOV727IWC
+VITE_MILESTONE_MANAGER_CONTRACT_ID=CDSVTVOJET5YEVYXDOUHCQKA7C7PBSSYFMM3HS4NQVX3EAWCZIZWZMZ4
+VITE_XLM_SAC_CONTRACT_ID=CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC
 ```
 
 ### Contracts
@@ -286,7 +288,13 @@ Frontend contract calls live in:
 SkillX/frontend/src/services/contracts.js
 ```
 
-Important calls include:
+Single-transaction (one wallet signature) calls used by the current UI:
+
+- `createFullJobOnChain(...)` — creates the job, funds escrow, and registers milestones in one transaction.
+- `acceptAndSubmitOnChain(...)` — accepts the job (idempotent) and submits a milestone in one transaction.
+- `fundAndApproveOnChain(...)` — tops up escrow if short and approves a milestone in one transaction.
+
+Individual calls also available:
 
 - `createJobOnChain(...)`
 - `depositEscrowOnChain(...)`
@@ -339,9 +347,10 @@ Required environment variables:
 VITE_API_BASE_URL=https://skillx-tqzb.onrender.com
 VITE_SOROBAN_RPC_URL=https://soroban-testnet.stellar.org
 VITE_NETWORK_PASSPHRASE=Test SDF Network ; September 2015
-VITE_ESCROW_CONTRACT_ID=CBKNB7YVVSHQMUH5DO63TIPLXZTVEIKITYSRUSTGKX2KQRXWYDJMNXNT
-VITE_JOB_MANAGER_CONTRACT_ID=CA7QPCOMXCEJ25EZ7XTTQ25IR6HK4CBUUG55GZGNKRCGJBIDEXHEYMKU
-VITE_MILESTONE_MANAGER_CONTRACT_ID=CDZ45H32U5YDEGKGBOWFFRY5XF73IE5TNGLM5UMYUIJUFIBONHZY5OZK
+VITE_ESCROW_CONTRACT_ID=CCPSEXCCYNIEYIDHZA774T6WQM3KXTLTETOI762G4USMTYFZXTVJKI4B
+VITE_JOB_MANAGER_CONTRACT_ID=CB7YQMFJIKEEK3G4554JGDH3EIKJY3VN4ZT7CSDEKLH6WCECOV727IWC
+VITE_MILESTONE_MANAGER_CONTRACT_ID=CDSVTVOJET5YEVYXDOUHCQKA7C7PBSSYFMM3HS4NQVX3EAWCZIZWZMZ4
+VITE_XLM_SAC_CONTRACT_ID=CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC
 ```
 
 ## Testing and Verification

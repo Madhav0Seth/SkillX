@@ -181,8 +181,90 @@ export default function ClientDashboard() {
           block: "start"
         });
       });
+
+      // If this was an open job that a freelancer just accepted, register the
+      // milestone schedule on-chain now (client-signed). Best-effort: never
+      // block loading the job on this.
+      if (result.job?.freelancer_wallet) {
+        try {
+          const registration = await ensureMilestonesRegisteredOnChain(
+            result.job,
+            result.milestones || []
+          );
+          if (registration === "registered") {
+            setStatus(
+              `Loaded job ${result.job.job_id}. Registered milestones on-chain for this accepted job.`
+            );
+          }
+        } catch (registerError) {
+          setStatus(
+            `Loaded job ${result.job.job_id}. On-chain milestone registration pending: ${registerError.message}`
+          );
+        }
+      }
     } catch (error) {
       setStatus(`Failed to load job details: ${error.message}`);
+    }
+  };
+
+  // Register milestones on-chain for an OPEN job that a freelancer has now
+  // accepted. Open jobs are posted with create_and_fund_job (job + escrow
+  // only, no milestones), so the client must register the schedule once a
+  // freelancer exists. This is client-signed because MilestoneManager
+  // .add_milestones requires the client's auth. No-op (returns "already")
+  // for direct-assigned jobs whose milestones were registered at post time.
+  const ensureMilestonesRegisteredOnChain = async (jobArg, milestonesArg = []) => {
+    if (!address || !jobArg) return false;
+
+    const freelancerWallet = normalizeWallet(jobArg.freelancer_wallet);
+    // No freelancer yet → still an unaccepted open job, nothing to register.
+    if (!freelancerWallet) return false;
+
+    // If milestones already exist on-chain, do nothing (no wallet prompt).
+    try {
+      await contracts.getMilestonesOnChain(jobArg.job_hash);
+      return "already";
+    } catch (_notRegistered) {
+      // Not registered yet — fall through and register them.
+    }
+
+    const parsed = (milestonesArg || []).map((m) => ({
+      ...m,
+      percentage: Number(m.percentage),
+      amount: Number(m.amount),
+      deadlineTs: Math.floor(new Date(m.deadline).getTime() / 1000),
+    }));
+    const totalAmount = parsed.reduce((sum, m) => sum + m.amount, 0);
+    const milestoneHashes = await Promise.all(
+      parsed.map((m) =>
+        sha256Hex(
+          JSON.stringify({
+            name: m.name,
+            percentage: m.percentage,
+            deadline: m.deadline,
+          })
+        )
+      )
+    );
+
+    try {
+      const txResult = await contracts.addMilestonesOnChain({
+        jobIdHex: jobArg.job_hash,
+        clientAddress: address,
+        freelancerAddress: freelancerWallet,
+        totalAmount,
+        milestoneHashesHex: milestoneHashes,
+        milestonePercentages: parsed.map((m) => m.percentage),
+        milestoneDeadlines: parsed.map((m) => m.deadlineTs),
+      });
+      setTxHash(txResult.hash);
+      return "registered";
+    } catch (error) {
+      // A concurrent registration may have already happened — treat as done.
+      if (error.message.includes("milestones already registered")) {
+        return "already";
+      }
+      throw error;
     }
   };
 
@@ -192,6 +274,17 @@ export default function ClientDashboard() {
       return;
     }
     try {
+      // Make sure milestones exist on-chain first (open jobs register them
+      // lazily once a freelancer has accepted).
+      try {
+        await ensureMilestonesRegisteredOnChain(selectedJob, selectedMilestones);
+      } catch (registerError) {
+        setStatus(
+          `Cannot approve yet: milestones are not registered on-chain. ${registerError.message}`
+        );
+        return;
+      }
+
       const index = selectedMilestones.findIndex(
         (item) => Number(item.milestone_id) === Number(milestone.milestone_id)
       );
@@ -221,20 +314,7 @@ export default function ClientDashboard() {
         return;
       }
 
-      const milestoneAmount = Number(milestone.amount || 0);
-      const escrowBalance = toNumber(
-        await contracts.getEscrowBalanceOnChain(selectedJob.job_hash)
-      );
-      if (escrowBalance < milestoneAmount) {
-        const missingAmount = milestoneAmount - escrowBalance;
-        await contracts.depositEscrowOnChain(
-          selectedJob.job_hash,
-          address,
-          missingAmount
-        );
-      }
-
-      const txResult = await contracts.approveMilestoneOnChain(
+      const txResult = await contracts.fundAndApproveOnChain(
         selectedJob.job_hash,
         index,
         normalizeWallet(address)
@@ -296,19 +376,7 @@ export default function ClientDashboard() {
         return;
       }
 
-      const milestoneAmount = Number(milestone.amount || 0);
-      const escrowBalance = toNumber(
-        await contracts.getEscrowBalanceOnChain(selectedJob.job_hash)
-      );
-      if (escrowBalance < milestoneAmount) {
-        await contracts.depositEscrowOnChain(
-          selectedJob.job_hash,
-          address,
-          milestoneAmount - escrowBalance
-        );
-      }
-
-      await contracts.approveMilestoneOnChain(
+      await contracts.fundAndApproveOnChain(
         selectedJob.job_hash,
         index,
         normalizeWallet(address)
@@ -411,13 +479,13 @@ export default function ClientDashboard() {
         return;
       }
 
+      // Freelancer is OPTIONAL. If a registered freelancer is selected, the
+      // job is direct-assigned and posted in one atomic transaction. If left
+      // empty, an Open Job is posted (any freelancer can accept it later) and
+      // milestones are registered on-chain once someone accepts.
       const normalizedFreelancerWallet = freelancerWallet
         ? normalizeWallet(freelancerWallet)
         : "";
-      if (!normalizedFreelancerWallet) {
-        setStatus("Select a registered freelancer before creating a job. Open-job milestone assignment is not supported by the deployed contracts.");
-        return;
-      }
 
       const parsedMilestones = milestones.map((m) => ({
         ...m,
@@ -473,31 +541,39 @@ export default function ClientDashboard() {
       try {
         const totalAmount = parsedMilestones.reduce((sum, m) => sum + m.amount, 0);
 
-        await contracts.createJobOnChain({
-          jobIdHex: result.job.job_hash,
-          jobHashHex: result.job.job_hash,
-          clientAddress: address,
-          totalAmount,
-        });
+        let txResult;
+        if (normalizedFreelancerWallet) {
+          // Direct-assigned job. Single atomic transaction: creates the job,
+          // funds escrow, and registers milestones in one on-chain call →
+          // ONE wallet signature instead of three.
+          txResult = await contracts.createFullJobOnChain({
+            jobIdHex: result.job.job_hash,
+            jobHashHex: result.job.job_hash,
+            clientAddress: address,
+            freelancerAddress: normalizedFreelancerWallet,
+            totalAmount,
+            milestoneHashesHex: milestoneHashes,
+            milestonePercentages: parsedMilestones.map((m) => m.percentage),
+            milestoneDeadlines: parsedMilestones.map((m) => m.deadlineTs),
+          });
 
-        const txResult = await contracts.depositEscrowOnChain(
-          result.job.job_hash,
-          address,
-          totalAmount
-        );
+          setTxHash(txResult.hash);
+          setStatus(`Job created on-chain, escrow funded, and milestones registered in a single transaction. DB Job ID: ${result.job.job_id}`);
+        } else {
+          // Open job (no freelancer yet). One transaction creates the job and
+          // funds escrow. Milestones are registered on-chain later, once a
+          // freelancer accepts the job (add_milestones needs the client's auth
+          // and a concrete freelancer address, so it cannot run at post time).
+          txResult = await contracts.createAndFundJobOnChain({
+            jobIdHex: result.job.job_hash,
+            jobHashHex: result.job.job_hash,
+            clientAddress: address,
+            totalAmount,
+          });
 
-        await contracts.addMilestonesOnChain({
-          jobIdHex: result.job.job_hash,
-          clientAddress: address,
-          freelancerAddress: normalizedFreelancerWallet,
-          totalAmount,
-          milestoneHashesHex: milestoneHashes,
-          milestonePercentages: parsedMilestones.map((m) => m.percentage),
-          milestoneDeadlines: parsedMilestones.map((m) => m.deadlineTs),
-        });
-        
-        setTxHash(txResult.hash);
-        setStatus(`Job created on-chain, escrow funded, and milestones registered. DB Job ID: ${result.job.job_id}`);
+          setTxHash(txResult.hash);
+          setStatus(`Open job posted on-chain and escrow funded in a single transaction. Milestones are registered on-chain once a freelancer accepts. DB Job ID: ${result.job.job_id}`);
+        }
       } catch (contractError) {
         const contractMessage = contractError.message.includes("VITE_JOB_MANAGER_CONTRACT_ID")
           ? "Job Manager contract ID is not configured."

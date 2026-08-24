@@ -26,8 +26,11 @@ const workflowCards = [
 ];
 
 export default function HomePage() {
-  const { hasProfile, profile } = useWallet();
+  const { hasProfile, profile, role } = useWallet();
   const firstName = profile?.name?.split(" ")?.[0] || "builder";
+
+  const showClient = role === "client" || role === "both";
+  const showFreelancer = role === "freelancer" || role === "both";
 
   return (
     <div className="home-page">
@@ -46,12 +49,16 @@ export default function HomePage() {
           <div className="home-actions">
             {hasProfile ? (
               <>
-                <Link className="btn-link home-primary-action" to="/client">
-                  Open Client Desk
-                </Link>
-                <Link className="btn-link ghost" to="/freelancer">
-                  Open Freelancer Desk
-                </Link>
+                {showClient && (
+                  <Link className="btn-link home-primary-action" to="/client">
+                    Open Client Desk
+                  </Link>
+                )}
+                {showFreelancer && (
+                  <Link className="btn-link ghost" to="/freelancer">
+                    Open Freelancer Desk
+                  </Link>
+                )}
               </>
             ) : (
               <Link className="btn-link home-primary-action" to="/role">
@@ -75,14 +82,18 @@ export default function HomePage() {
             ))}
           </div>
           <div className="home-route-list">
-            <Link to="/client">
-              <span>Client flow</span>
-              <strong>Post jobs and approve payouts</strong>
-            </Link>
-            <Link to="/freelancer">
-              <span>Freelancer flow</span>
-              <strong>Accept work and submit milestones</strong>
-            </Link>
+            {showClient && (
+              <Link to="/client">
+                <span>Client flow</span>
+                <strong>Post jobs and approve payouts</strong>
+              </Link>
+            )}
+            {showFreelancer && (
+              <Link to="/freelancer">
+                <span>Freelancer flow</span>
+                <strong>Accept work and submit milestones</strong>
+              </Link>
+            )}
             <Link to="/profile">
               <span>Profile</span>
               <strong>Wallet, reputation, and history</strong>
@@ -109,7 +120,9 @@ export default function HomePage() {
             Create a job, break it into milestones, fund escrow, and release
             payments only after submitted work is approved.
           </p>
-          <Link className="btn-link ghost" to="/client">Manage client work</Link>
+          {showClient && (
+            <Link className="btn-link ghost" to="/client">Manage client work</Link>
+          )}
         </div>
         <div className="home-feature-block home-feature-block-alt">
           <span className="home-section-label">For freelancers</span>
@@ -118,7 +131,9 @@ export default function HomePage() {
             Browse open jobs, accept the right project, submit milestone URLs,
             and track payment status from one workspace.
           </p>
-          <Link className="btn-link ghost" to="/freelancer">Manage freelance work</Link>
+          {showFreelancer && (
+            <Link className="btn-link ghost" to="/freelancer">Manage freelance work</Link>
+          )}
         </div>
       </section>
     </div>

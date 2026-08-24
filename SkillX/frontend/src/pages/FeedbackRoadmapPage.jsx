@@ -1,7 +1,7 @@
 const REQUESTS = [
-  { summary: "Reduce unnecessary wallet transactions and improve sync reliability.", completed: false },
+  { summary: "Reduce unnecessary wallet transactions and improve sync reliability.", completed: true },
   { summary: "Notify clients when a milestone is submitted for approval.", completed: false },
-  { summary: "Make job posting, escrow funding, and milestone setup feel like one flow.", completed: false },
+  { summary: "Make job posting, escrow funding, and milestone setup feel like one flow.", completed: true },
   { summary: "Add direct communication between the client and freelancer on a job.", completed: false },
   { summary: "Add skill-based marketplace filtering for better job discovery.", completed: false },
   { summary: "Show clearer, actionable errors when a transaction or sync is blocked.", completed: true },

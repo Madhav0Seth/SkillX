@@ -156,6 +156,9 @@ function getAcceptContractMessage(error) {
 
 function getSubmitContractMessage(error) {
   const message = error?.message || "Unknown contract error";
+  if (message.includes("milestones not found")) {
+    return `Submit failed: this job's milestones are not registered on-chain yet. This is an open job you just accepted — the client needs to open it once to register the milestone schedule on-chain. Try again after they do. Details: ${message}`;
+  }
   if (
     message.includes("InvalidAction") ||
     message.includes("UnreachableCodeReached")
@@ -649,7 +652,6 @@ export default function FreelancerDashboard() {
         setStatus(blockedReason);
         return;
       }
-      await ensureOnChainAccepted(job);
       const onChainMilestone = await contracts.getMilestoneOnChain(
         job.job_hash,
         index
@@ -661,8 +663,8 @@ export default function FreelancerDashboard() {
         );
         return;
       }
-      const txResult = await contracts.submitMilestoneOnChain(
-        job?.job_hash || "",
+      const txResult = await contracts.acceptAndSubmitOnChain(
+        job.job_hash,
         index,
         walletAddress
       );

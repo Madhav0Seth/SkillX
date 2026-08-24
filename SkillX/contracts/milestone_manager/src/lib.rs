@@ -113,6 +113,33 @@ mod escrow_client {
         let args: Vec<Val> = (job_id.clone(), freelancer.clone(), amount).into_val(env);
         env.invoke_contract::<()>(escrow_id, &Symbol::new(env, "release_payment"), args);
     }
+
+    /// Call `EscrowContract::deposit(job_id, client, amount)`.
+    ///
+    /// Funds escrow for a job. The escrow contract pulls `amount` tokens
+    /// from `client` (who must have authorized the transfer).
+    pub fn deposit(
+        env: &Env,
+        escrow_id: &Address,
+        job_id: &BytesN<32>,
+        client: &Address,
+        amount: i128,
+    ) {
+        let args: Vec<Val> = (job_id.clone(), client.clone(), amount).into_val(env);
+        env.invoke_contract::<()>(escrow_id, &Symbol::new(env, "deposit"), args);
+    }
+
+    /// Call `EscrowContract::get_balance(job_id) -> i128`.
+    ///
+    /// Returns the currently escrowed balance for the job.
+    pub fn get_balance(
+        env: &Env,
+        escrow_id: &Address,
+        job_id: &BytesN<32>,
+    ) -> i128 {
+        let args: Vec<Val> = (job_id.clone(),).into_val(env);
+        env.invoke_contract::<i128>(escrow_id, &Symbol::new(env, "get_balance"), args)
+    }
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -290,7 +317,33 @@ impl MilestoneManagerContract {
     /// • Only the client may approve.
     /// • Milestone must be in Submitted status.
     pub fn approve_milestone(env: Env, job_id: BytesN<32>, milestone_index: u32) {
-        let mut jm = Self::load_milestones(&env, &job_id);
+        let jm = Self::load_milestones(&env, &job_id);
+        jm.client.require_auth();
+
+        // Core approval steps (release payment, mark Paid, publish event).
+        Self::do_approve(&env, jm, &job_id, milestone_index);
+    }
+
+    // ───────────────────────────────────────────────────────────
+    //  FUND & APPROVE (ATOMIC: escrow top-up + approve_milestone)
+    // ───────────────────────────────────────────────────────────
+
+    /// Client tops up escrow (only if needed) then approves a milestone —
+    /// all in a SINGLE transaction.
+    ///
+    /// This lets the frontend trigger one wallet signature instead of
+    /// two separate ones (escrow deposit → approve_milestone).
+    ///
+    /// Behaviour:
+    /// • Only the client may call (client is the signer/depositor).
+    /// • Milestone must be in Submitted status (same check as
+    ///   `approve_milestone`).
+    /// • Queries the current escrow balance; if it is below the milestone
+    ///   amount, deposits exactly the difference from the client.
+    /// • Then performs the SAME approval logic as `approve_milestone`
+    ///   (release payment, mark Paid, publish MilestoneApproved).
+    pub fn fund_and_approve(env: Env, job_id: BytesN<32>, milestone_index: u32) {
+        let jm = Self::load_milestones(&env, &job_id);
         jm.client.require_auth();
 
         let milestone = jm.milestones.get(milestone_index).unwrap_or_else(|| {
@@ -301,41 +354,26 @@ impl MilestoneManagerContract {
             panic!("milestone not in Submitted status");
         }
 
-        let payout_amount = milestone.amount;
-        let freelancer = jm.freelancer.clone();
-
-        // Cross-contract: release payment from escrow
         let escrow_id: Address = env
             .storage()
             .instance()
             .get(&DataKey::EscrowContract)
             .expect("escrow not configured");
 
-        escrow_client::release_payment(
-            &env,
-            &escrow_id,
-            &job_id,
-            &freelancer,
-            payout_amount,
-        );
+        // Top up escrow only if the current balance is insufficient.
+        let balance = escrow_client::get_balance(&env, &escrow_id, &job_id);
+        if balance < milestone.amount {
+            escrow_client::deposit(
+                &env,
+                &escrow_id,
+                &job_id,
+                &jm.client,
+                milestone.amount - balance,
+            );
+        }
 
-        // Mark milestone as Paid (single write after successful escrow call)
-        let mut milestone_final = jm.milestones.get(milestone_index).unwrap();
-        milestone_final.status = MilestoneStatus::Paid;
-        jm.milestones.set(milestone_index, milestone_final);
-
-        env.storage()
-            .persistent()
-            .set(&DataKey::Milestones(job_id.clone()), &jm);
-
-        env.events().publish(
-            (Symbol::new(&env, "MilestoneApproved"), job_id.clone()),
-            &MilestoneApprovedEvent {
-                job_id,
-                milestone_index,
-                amount: payout_amount,
-            },
-        );
+        // Core approval steps (release payment, mark Paid, publish event).
+        Self::do_approve(&env, jm, &job_id, milestone_index);
     }
 
     // ───────────────────────────────────────────────────────────
@@ -451,6 +489,65 @@ impl MilestoneManagerContract {
             .persistent()
             .get(&DataKey::Milestones(job_id.clone()))
             .unwrap_or_else(|| panic!("milestones not found for this job"))
+    }
+
+    /// Core milestone approval steps shared by `approve_milestone` and
+    /// `fund_and_approve`.
+    ///
+    /// Assumes the caller has already required the client's auth and
+    /// verified the milestone is in Submitted status. Releases payment
+    /// from escrow, marks the milestone Paid, and publishes
+    /// `MilestoneApproved` — preserving `approve_milestone`'s exact
+    /// external behavior and event.
+    fn do_approve(
+        env: &Env,
+        mut jm: JobMilestones,
+        job_id: &BytesN<32>,
+        milestone_index: u32,
+    ) {
+        let milestone = jm.milestones.get(milestone_index).unwrap_or_else(|| {
+            panic!("milestone index out of bounds")
+        });
+
+        if milestone.status != MilestoneStatus::Submitted {
+            panic!("milestone not in Submitted status");
+        }
+
+        let payout_amount = milestone.amount;
+        let freelancer = jm.freelancer.clone();
+
+        // Cross-contract: release payment from escrow
+        let escrow_id: Address = env
+            .storage()
+            .instance()
+            .get(&DataKey::EscrowContract)
+            .expect("escrow not configured");
+
+        escrow_client::release_payment(
+            env,
+            &escrow_id,
+            job_id,
+            &freelancer,
+            payout_amount,
+        );
+
+        // Mark milestone as Paid (single write after successful escrow call)
+        let mut milestone_final = jm.milestones.get(milestone_index).unwrap();
+        milestone_final.status = MilestoneStatus::Paid;
+        jm.milestones.set(milestone_index, milestone_final);
+
+        env.storage()
+            .persistent()
+            .set(&DataKey::Milestones(job_id.clone()), &jm);
+
+        env.events().publish(
+            (Symbol::new(env, "MilestoneApproved"), job_id.clone()),
+            &MilestoneApprovedEvent {
+                job_id: job_id.clone(),
+                milestone_index,
+                amount: payout_amount,
+            },
+        );
     }
 
     fn require_job_manager(env: &Env) {

@@ -72,8 +72,8 @@ export default function Header({ theme, onToggleTheme }) {
           <Link to="/profile" onClick={() => setIsOpen(false)}>Profile</Link>
           {isConnected && (
             <>
-              <Link to="/client" onClick={() => setIsOpen(false)}>Client</Link>
-              <Link to="/freelancer" onClick={() => setIsOpen(false)}>Freelancer</Link>
+              {showClient && <Link to="/client" onClick={() => setIsOpen(false)}>Client</Link>}
+              {showFreelancer && <Link to="/freelancer" onClick={() => setIsOpen(false)}>Freelancer</Link>}
             </>
           )}
         </nav>
