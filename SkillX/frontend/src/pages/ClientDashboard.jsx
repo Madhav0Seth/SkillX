@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { api } from "../services/api";
-import { contracts } from "../services/contracts";
+import { contracts, requireOnChainJobId } from "../services/contracts";
 import { useWallet } from "../context/WalletContext";
 import FreelancerCard from "../components/FreelancerCard";
 import JobCard from "../components/JobCard";
@@ -115,6 +115,8 @@ export default function ClientDashboard() {
   const [selectedMilestones, setSelectedMilestones] = useState([]);
   const [status, setStatus] = useState("");
   const [txHash, setTxHash] = useState("");
+  const [newJobFunding, setNewJobFunding] = useState(null);
+  const [isFundingNewJob, setIsFundingNewJob] = useState(false);
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
@@ -182,9 +184,9 @@ export default function ClientDashboard() {
         });
       });
 
-      // If this was an open job that a freelancer just accepted, register the
-      // milestone schedule on-chain now (client-signed). Best-effort: never
-      // block loading the job on this.
+      // An accepted open job needs a client-signed registration before the
+      // freelancer can submit. Attempt recovery on load, but keep the job
+      // visible if the client wallet is not ready to sign.
       if (result.job?.freelancer_wallet) {
         try {
           const registration = await ensureMilestonesRegisteredOnChain(
@@ -222,7 +224,7 @@ export default function ClientDashboard() {
 
     // If milestones already exist on-chain, do nothing (no wallet prompt).
     try {
-      await contracts.getMilestonesOnChain(jobArg.job_hash);
+      await contracts.getMilestonesOnChain(requireOnChainJobId(jobArg));
       return "already";
     } catch (_notRegistered) {
       // Not registered yet — fall through and register them.
@@ -249,7 +251,7 @@ export default function ClientDashboard() {
 
     try {
       const txResult = await contracts.addMilestonesOnChain({
-        jobIdHex: jobArg.job_hash,
+        jobIdHex: requireOnChainJobId(jobArg),
         clientAddress: address,
         freelancerAddress: freelancerWallet,
         totalAmount,
@@ -265,6 +267,31 @@ export default function ClientDashboard() {
         return "already";
       }
       throw error;
+    }
+  };
+
+  const registerSelectedJobMilestones = async () => {
+    if (!address || !selectedJob) {
+      setStatus("Load an accepted job and connect the client wallet first.");
+      return;
+    }
+
+    try {
+      const registration = await ensureMilestonesRegisteredOnChain(
+        selectedJob,
+        selectedMilestones
+      );
+      if (registration === "registered") {
+        setStatus(
+          `Registered milestones on-chain for job ${selectedJob.job_id}. The freelancer can submit the first pending milestone now.`
+        );
+      } else if (registration === "already") {
+        setStatus(`Milestones are already registered on-chain for job ${selectedJob.job_id}.`);
+      } else {
+        setStatus("This job has not been accepted yet, so there is no freelancer to bind to its milestone schedule.");
+      }
+    } catch (error) {
+      setStatus(`Milestone registration failed: ${error.message}`);
     }
   };
 
@@ -294,9 +321,15 @@ export default function ClientDashboard() {
       }
 
       const onChainMilestone = await contracts.getMilestoneOnChain(
-        selectedJob.job_hash,
+        requireOnChainJobId(selectedJob),
         index
       );
+      if (!onChainMilestone) {
+        setStatus(
+          `Cannot approve yet. On-chain milestone ${index} is unavailable. Confirm milestones are registered on-chain, then try again.`
+        );
+        return;
+      }
       const onChainStatus = getMilestoneStatus(onChainMilestone);
       if (onChainStatus === "paid") {
         await api.approveMilestone(milestone.milestone_id, normalizeWallet(address));
@@ -315,7 +348,7 @@ export default function ClientDashboard() {
       }
 
       const txResult = await contracts.fundAndApproveOnChain(
-        selectedJob.job_hash,
+        requireOnChainJobId(selectedJob),
         index,
         normalizeWallet(address)
       );
@@ -357,9 +390,15 @@ export default function ClientDashboard() {
       }
 
       const onChainMilestone = await contracts.getMilestoneOnChain(
-        selectedJob.job_hash,
+        requireOnChainJobId(selectedJob),
         index
       );
+      if (!onChainMilestone) {
+        setStatus(
+          `Cannot sync payment. On-chain milestone ${index} is unavailable. Confirm milestones are registered on-chain, then try again.`
+        );
+        return;
+      }
       const onChainStatus = getMilestoneStatus(onChainMilestone);
       if (onChainStatus === "paid") {
         await api.approveMilestone(milestone.milestone_id, normalizeWallet(address));
@@ -377,7 +416,7 @@ export default function ClientDashboard() {
       }
 
       await contracts.fundAndApproveOnChain(
-        selectedJob.job_hash,
+        requireOnChainJobId(selectedJob),
         index,
         normalizeWallet(address)
       );
@@ -401,7 +440,7 @@ export default function ClientDashboard() {
 
     try {
       const currentBalance = toNumber(
-        await contracts.getEscrowBalanceOnChain(selectedJob.job_hash)
+        await contracts.getEscrowBalanceOnChain(requireOnChainJobId(selectedJob))
       );
       if (currentBalance >= totalAmount) {
         setStatus(`Escrow already has ${currentBalance.toLocaleString()} for job ${selectedJob.job_id}.`);
@@ -409,7 +448,7 @@ export default function ClientDashboard() {
       }
 
       const txResult = await contracts.depositEscrowOnChain(
-        selectedJob.job_hash,
+        requireOnChainJobId(selectedJob),
         address,
         totalAmount - currentBalance
       );
@@ -420,6 +459,59 @@ export default function ClientDashboard() {
         ? "Escrow is already funded for this job."
         : `Escrow funding failed: ${error.message}`;
       setStatus(message);
+    }
+  };
+
+  const fundNewlyCreatedJob = async () => {
+    if (!address || !newJobFunding?.job) {
+      setStatus("Connect the client wallet and create a job first.");
+      return;
+    }
+
+    const { job, milestones: createdMilestones = [] } = newJobFunding;
+    const totalAmount = getMilestoneTotal(createdMilestones);
+    if (totalAmount <= 0) {
+      setStatus("Cannot fund escrow because this job has no milestone amount.");
+      return;
+    }
+
+    setIsFundingNewJob(true);
+    try {
+      const currentBalance = toNumber(
+        await contracts.getEscrowBalanceOnChain(requireOnChainJobId(job))
+      );
+      if (currentBalance >= totalAmount) {
+        setNewJobFunding(null);
+        setSelectedJob(job);
+        setSelectedMilestones(createdMilestones);
+        setActiveTab("jobs");
+        setStatus(`Escrow is already funded for job ${job.job_id}.`);
+        return;
+      }
+
+      const txResult = await contracts.depositEscrowOnChain(
+        requireOnChainJobId(job),
+        address,
+        totalAmount - currentBalance
+      );
+      setTxHash(txResult.hash);
+      setNewJobFunding(null);
+      setSelectedJob(job);
+      setSelectedMilestones(createdMilestones);
+      setMyJobs((previous) =>
+        previous.some((item) => item.job_id === job.job_id)
+          ? previous
+          : [job, ...previous]
+      );
+      setActiveTab("jobs");
+      setStatus(`Escrow funded for job ${job.job_id}. You can approve submitted milestones now.`);
+    } catch (error) {
+      const message = error.message.includes("job already funded")
+        ? `Escrow is already funded for job ${job.job_id}.`
+        : `Escrow funding failed: ${error.message}`;
+      setStatus(message);
+    } finally {
+      setIsFundingNewJob(false);
     }
   };
 
@@ -525,6 +617,14 @@ export default function ClientDashboard() {
         milestones
       };
       const result = await api.createJob(payload);
+      const createdMilestones = result.milestones || parsedMilestones;
+      setSelectedJob(result.job);
+      setSelectedMilestones(createdMilestones);
+      setMyJobs((previous) =>
+        previous.some((item) => item.job_id === result.job.job_id)
+          ? previous
+          : [result.job, ...previous]
+      );
 
       const milestoneHashes = await Promise.all(
         parsedMilestones.map((m) =>
@@ -547,7 +647,7 @@ export default function ClientDashboard() {
           // funds escrow, and registers milestones in one on-chain call →
           // ONE wallet signature instead of three.
           txResult = await contracts.createFullJobOnChain({
-            jobIdHex: result.job.job_hash,
+            jobIdHex: requireOnChainJobId(result.job),
             jobHashHex: result.job.job_hash,
             clientAddress: address,
             freelancerAddress: normalizedFreelancerWallet,
@@ -558,6 +658,7 @@ export default function ClientDashboard() {
           });
 
           setTxHash(txResult.hash);
+          setNewJobFunding(null);
           setStatus(`Job created on-chain, escrow funded, and milestones registered in a single transaction. DB Job ID: ${result.job.job_id}`);
         } else {
           // Open job (no freelancer yet). One transaction creates the job and
@@ -565,21 +666,24 @@ export default function ClientDashboard() {
           // freelancer accepts the job (add_milestones needs the client's auth
           // and a concrete freelancer address, so it cannot run at post time).
           txResult = await contracts.createAndFundJobOnChain({
-            jobIdHex: result.job.job_hash,
+            jobIdHex: requireOnChainJobId(result.job),
             jobHashHex: result.job.job_hash,
             clientAddress: address,
             totalAmount,
           });
 
           setTxHash(txResult.hash);
+          setNewJobFunding(null);
           setStatus(`Open job posted on-chain and escrow funded in a single transaction. Milestones are registered on-chain once a freelancer accepts. DB Job ID: ${result.job.job_id}`);
         }
       } catch (contractError) {
+        setNewJobFunding({ job: result.job, milestones: createdMilestones });
         const contractMessage = contractError.message.includes("VITE_JOB_MANAGER_CONTRACT_ID")
           ? "Job Manager contract ID is not configured."
           : contractError.message.includes("VITE_MILESTONE_MANAGER_CONTRACT_ID")
           ? "Milestone Manager contract ID is not configured."
           : contractError.message;
+        setNewJobFunding({ job: result.job, milestones: createdMilestones });
         setStatus(
           `Job created in database. On-chain setup incomplete: ${contractMessage}`
         );
@@ -649,6 +753,9 @@ export default function ClientDashboard() {
                     <span>{selectedMilestones.length} milestones</span>
                   </div>
                   <div className="row-actions">
+                    <button className="ghost" onClick={registerSelectedJobMilestones}>
+                      Register Milestones On-chain
+                    </button>
                     <button className="ghost" onClick={fundSelectedEscrow}>
                       Fund Escrow
                     </button>
@@ -832,6 +939,26 @@ export default function ClientDashboard() {
           )}
         </main>
       </div>
+
+      {newJobFunding && (
+        <div className="status-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="fund-new-job-title">
+          <div className="status-modal-content">
+            <div className="status-icon info">ℹ</div>
+            <h4 id="fund-new-job-title">Fund your new job</h4>
+            <p className="status-message">
+              Job #{newJobFunding.job.job_id} was created, but its escrow still needs funding. Fund {getMilestoneTotal(newJobFunding.milestones).toLocaleString()} XLM now to make it ready for milestone payments.
+            </p>
+            <div className="row-actions" style={{ justifyContent: "center" }}>
+              <button onClick={fundNewlyCreatedJob} disabled={isFundingNewJob}>
+                {isFundingNewJob ? "Funding Escrow…" : "Fund This Job"}
+              </button>
+              <button className="ghost" onClick={() => setNewJobFunding(null)} disabled={isFundingNewJob}>
+                Fund Later
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {status && (
         <div className="status-modal-overlay" onClick={handleDismiss}>

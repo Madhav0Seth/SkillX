@@ -1,7 +1,7 @@
 const express = require("express");
 const { supabase } = require("../config/supabase");
 const { badRequest, internalError } = require("../utils/http");
-const { isWalletAddress, normalizeWallet, requiredText, validateUrl } = require("../utils/validation");
+const { isWalletAddress, normalizeHttpUrl, normalizeWallet, requiredText } = require("../utils/validation");
 
 const router = express.Router();
 const VALID_ROLES = new Set(["client", "freelancer", "both"]);
@@ -165,11 +165,15 @@ router.post("/profile", async (req, res) => {
       return badRequest(res, "role must be client, freelancer, or both");
     }
 
+    const portfolioInput = typeof portfolio === "string" ? portfolio.trim() : "";
+    const avatarInput = typeof avatar_url === "string" ? avatar_url.trim() : "";
+    const normalizedPortfolio = portfolioInput ? normalizeHttpUrl(portfolioInput) : "";
+    const normalizedAvatarUrl = avatarInput ? normalizeHttpUrl(avatarInput) : "";
     const fieldsError =
       (name && requiredText(name, "name", { max: 120 })) ||
       (bio && requiredText(bio, "bio", { max: 2000 })) ||
-      (portfolio && validateUrl(portfolio, "portfolio")) ||
-      (avatar_url && validateUrl(avatar_url, "avatar_url"));
+      (portfolioInput && !normalizedPortfolio && "portfolio must be a valid domain or HTTP(S) URL") ||
+      (avatarInput && !normalizedAvatarUrl && "avatar_url must be a valid domain or HTTP(S) URL");
     if (fieldsError) return badRequest(res, fieldsError);
     if (skills !== undefined && (!Array.isArray(skills) || skills.length > 30 || skills.some((skill) => typeof skill !== "string" || skill.trim().length === 0 || skill.trim().length > 80))) {
       return badRequest(res, "skills must be an array of up to 30 short strings");
@@ -179,8 +183,8 @@ router.post("/profile", async (req, res) => {
       role,
       skills: (skills || []).map((skill) => skill.trim()),
       bio: typeof bio === "string" ? bio.trim() : "",
-      portfolio: typeof portfolio === "string" ? portfolio.trim() : "",
-      avatar_url: typeof avatar_url === "string" ? avatar_url.trim() : "",
+      portfolio: normalizedPortfolio,
+      avatar_url: normalizedAvatarUrl,
       name: typeof name === "string" ? name.trim() : ""
     };
 

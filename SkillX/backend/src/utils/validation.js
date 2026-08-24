@@ -28,17 +28,25 @@ function pageLimit(value, defaultLimit = 50, maxLimit = 100) {
   return limit && limit <= maxLimit ? limit : null;
 }
 
+function normalizeHttpUrl(value) {
+  const text = typeof value === "string" ? value.trim() : "";
+  if (!text) return "";
+
+  const candidate = /^[a-z][a-z\d+.-]*:/i.test(text) ? text : `https://${text}`;
+  try {
+    const url = new URL(candidate);
+    return ["http:", "https:"].includes(url.protocol) && url.hostname.includes(".")
+      ? url.toString()
+      : "";
+  } catch {
+    return "";
+  }
+}
+
 function validateUrl(value, field) {
   const textError = requiredText(value, field, { max: 2048 });
   if (textError) return textError;
-  try {
-    const url = new URL(value);
-    return ["http:", "https:"].includes(url.protocol)
-      ? null
-      : `${field} must use http or https`;
-  } catch {
-    return `${field} must be a valid URL`;
-  }
+  return normalizeHttpUrl(value) ? null : `${field} must be a valid domain or HTTP(S) URL`;
 }
 
 function validateMilestones(value) {
@@ -69,6 +77,7 @@ function validateMilestones(value) {
 
 module.exports = {
   isWalletAddress,
+  normalizeHttpUrl,
   normalizeWallet,
   pageLimit,
   positiveId,

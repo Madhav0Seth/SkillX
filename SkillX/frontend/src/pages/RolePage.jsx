@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../services/api";
 import { useWallet } from "../context/WalletContext";
-import { isHttpUrl, normalizeWallet } from "../utils/wallet";
+import { normalizeHttpUrl, normalizeWallet } from "../utils/wallet";
 
 const EMPTY_PROFILE = { role: "client", name: "", skills: "", bio: "", portfolio: "", avatarUrl: "" };
 
@@ -33,8 +33,14 @@ export default function RolePage() {
     event.preventDefault();
     setMessage("");
     if (!address) return setMessage("Connect your wallet first.");
-    if (form.portfolio && !isHttpUrl(form.portfolio)) return setMessage("Portfolio URL must start with http:// or https://.");
-    if (form.avatarUrl && !isHttpUrl(form.avatarUrl)) return setMessage("Avatar URL must start with http:// or https://.");
+
+    const portfolioInput = form.portfolio.trim();
+    const avatarInput = form.avatarUrl.trim();
+    const portfolio = normalizeHttpUrl(portfolioInput);
+    const avatarUrl = normalizeHttpUrl(avatarInput);
+    if (portfolioInput && !portfolio) return setMessage("Portfolio URL must be a valid domain or HTTP(S) URL.");
+    if (avatarInput && !avatarUrl) return setMessage("Avatar URL must be a valid domain or HTTP(S) URL.");
+
     try {
       setSaving(true);
       const result = await api.createProfile({
@@ -43,8 +49,8 @@ export default function RolePage() {
         name: form.name.trim(),
         skills: [...new Set(form.skills.split(",").map((skill) => skill.trim()).filter(Boolean))],
         bio: form.bio.trim(),
-        portfolio: form.portfolio.trim(),
-        avatar_url: form.avatarUrl.trim(),
+        portfolio,
+        avatar_url: avatarUrl,
       });
       updateProfile(result.profile);
       navigate("/profile", { replace: true });
@@ -86,7 +92,7 @@ export default function RolePage() {
         </label>
         <label>
           Portfolio URL
-          <input type="url" value={form.portfolio} onChange={updateField("portfolio")} placeholder="https://portfolio.example" />
+          <input type="text" value={form.portfolio} onChange={updateField("portfolio")} placeholder="portfolio.example or https://portfolio.example" />
         </label>
         <button type="submit" disabled={saving}>{saving ? "Saving…" : hasProfile ? "Update Profile" : "Save Profile"}</button>
       </form>

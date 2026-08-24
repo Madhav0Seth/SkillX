@@ -97,8 +97,13 @@ export default function JobCard({
       {(onAccept || onSelect) && (
         <div className="row-actions">
           {onSelect && (
-            <button className="ghost" onClick={() => onSelect(job)}>
-              {isSelected ? "Selected" : "View Details"}
+            <button
+              className="ghost"
+              onClick={() => onSelect(job)}
+              aria-pressed={isSelected}
+              aria-label={isSelected ? `${job.title} selected` : `Select ${job.title}`}
+            >
+              {isSelected ? "Selected — View Submission" : "Select Job"}
             </button>
           )}
           {onAccept && !isAssigned && <button onClick={() => onAccept(job)}>Accept</button>}

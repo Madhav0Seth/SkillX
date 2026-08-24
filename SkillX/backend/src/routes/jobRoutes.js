@@ -2,6 +2,13 @@ const express = require("express");
 const { supabase } = require("../config/supabase");
 const { sha256 } = require("../utils/hash");
 const { badRequest, internalError, notFound } = require("../utils/http");
+
+// The Soroban storage key must be independent from job_hash. job_hash identifies
+// the off-chain document; this derives the canonical 32-byte on-chain key from
+// the immutable database job id after the row has been created.
+function canonicalOnChainJobId(jobId) {
+  return sha256(`skillx:soroban-job-id:v1:${jobId}`);
+}
 const { isWalletAddress, normalizeWallet, pageLimit, positiveId, requiredText, validateMilestones } = require("../utils/validation");
 
 const router = express.Router();
@@ -68,7 +75,23 @@ router.post("/job", async (req, res) => {
     const normalizedMilestones = milestones.map(({ name, percentage, amount, deadline }) => ({ name: name.trim(), percentage: Number(percentage), amount: Number(amount), deadline }));
     const { data, error } = await supabase.rpc("create_job_with_milestones", { p_client_wallet: clientWallet, p_freelancer_wallet: freelancerWallet, p_title: title.trim(), p_description: description.trim(), p_job_hash: jobHash, p_milestones: normalizedMilestones });
     if (error) throw error;
-    return res.status(201).json(data);
+    if (!data?.job?.job_id) {
+      const configurationError = new Error("create_job_with_milestones returned an invalid result");
+      configurationError.code = "JOB_CREATION_RPC_INVALID_RESULT";
+      throw configurationError;
+    }
+
+    const onChainJobId = canonicalOnChainJobId(data.job.job_id);
+    const { data: job, error: updateError } = await supabase
+      .from("jobs")
+      .update({ on_chain_job_id: onChainJobId })
+      .eq("job_id", data.job.job_id)
+      .is("on_chain_job_id", null)
+      .select()
+      .single();
+    if (updateError) throw updateError;
+
+    return res.status(201).json({ ...data, job });
   } catch (error) { return internalError(res, error); }
 });
 

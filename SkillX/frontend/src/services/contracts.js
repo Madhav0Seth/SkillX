@@ -229,6 +229,24 @@ function hexToBytesScVal(hex) {
   return xdr.ScVal.scvBytes(bytes);
 }
 
+export function getOnChainJobId(job) {
+  const id = job?.on_chain_job_id;
+  if (typeof id === "string" && /^[0-9a-f]{64}$/i.test(id)) {
+    return id.toLowerCase();
+  }
+  return null;
+}
+
+export function requireOnChainJobId(job) {
+  const id = getOnChainJobId(job);
+  if (!id) {
+    throw new Error(
+      "This database job has no canonical on-chain ID. It may predate the on-chain ID migration; do not call the contract with job_hash."
+    );
+  }
+  return id;
+}
+
 // ═══════════════════════════════════════════════════════════════
 //  Public API
 // ═══════════════════════════════════════════════════════════════
@@ -466,6 +484,26 @@ export const contracts = {
   },
 
   async getMilestoneOnChain(jobIdHex, milestoneIndex) {
+    if (!Number.isInteger(milestoneIndex) || milestoneIndex < 0) {
+      return null;
+    }
+
+    // get_milestones returns the JobMilestones struct, not the milestone Vec.
+    // The previous Array.isArray guard therefore treated every valid deployed
+    // schedule as absent and prevented submission before the contract call.
+    let schedule;
+    try {
+      schedule = await this.getMilestonesOnChain(jobIdHex);
+    } catch (_error) {
+      return null;
+    }
+    const milestones = Array.isArray(schedule)
+      ? schedule
+      : schedule?.milestones;
+    if (!Array.isArray(milestones) || milestoneIndex >= milestones.length) {
+      return null;
+    }
+
     return simulateContractCall(
       milestoneManagerContractId,
       "VITE_MILESTONE_MANAGER_CONTRACT_ID",

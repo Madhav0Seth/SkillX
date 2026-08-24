@@ -21,8 +21,19 @@ create table if not exists jobs (
   title text not null,
   description text not null,
   job_hash text not null,
+  -- Canonical 32-byte identifier used by every Soroban contract lookup.
+  -- job_hash remains the hash of the off-chain document and is not a storage key.
+  on_chain_job_id text,
   created_at timestamptz not null default now()
 );
+
+alter table jobs add column if not exists on_chain_job_id text;
+alter table jobs drop constraint if exists jobs_on_chain_job_id_hex;
+alter table jobs
+  add constraint jobs_on_chain_job_id_hex
+  check (on_chain_job_id is null or on_chain_job_id ~ '^[0-9a-f]{64}$');
+create unique index if not exists idx_jobs_on_chain_job_id
+  on jobs(on_chain_job_id) where on_chain_job_id is not null;
 
 create table if not exists milestones (
   milestone_id bigint generated always as identity primary key,
