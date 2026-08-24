@@ -5,6 +5,7 @@ const REQUESTS = [
   { summary: "Add direct communication between the client and freelancer on a job.", completed: false },
   { summary: "Add skill-based marketplace filtering for better job discovery.", completed: false },
   { summary: "Show clearer, actionable errors when a transaction or sync is blocked.", completed: true },
+  { summary: "Add wallet transaction loading states", completed: true },
 ];
 
 export default function FeedbackRoadmapPage() {

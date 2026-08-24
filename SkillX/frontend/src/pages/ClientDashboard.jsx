@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import TransactionLoader from "../components/TransactionLoader";
 import { api } from "../services/api";
 import { contracts, requireOnChainJobId } from "../services/contracts";
 import { useWallet } from "../context/WalletContext";
@@ -117,6 +118,14 @@ export default function ClientDashboard() {
   const [txHash, setTxHash] = useState("");
   const [newJobFunding, setNewJobFunding] = useState(null);
   const [isFundingNewJob, setIsFundingNewJob] = useState(false);
+  const [transaction, setTransaction] = useState(null);
+
+  const beginTransaction = (action) => {
+    setTransaction({ action, phase: "wallet" });
+    return (phase) => setTransaction((current) =>
+      current ? { ...current, phase } : current
+    );
+  };
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
@@ -215,7 +224,7 @@ export default function ClientDashboard() {
   // freelancer exists. This is client-signed because MilestoneManager
   // .add_milestones requires the client's auth. No-op (returns "already")
   // for direct-assigned jobs whose milestones were registered at post time.
-  const ensureMilestonesRegisteredOnChain = async (jobArg, milestonesArg = []) => {
+  const ensureMilestonesRegisteredOnChain = async (jobArg, milestonesArg = [], onPhase) => {
     if (!address || !jobArg) return false;
 
     const freelancerWallet = normalizeWallet(jobArg.freelancer_wallet);
@@ -258,6 +267,7 @@ export default function ClientDashboard() {
         milestoneHashesHex: milestoneHashes,
         milestonePercentages: parsed.map((m) => m.percentage),
         milestoneDeadlines: parsed.map((m) => m.deadlineTs),
+        onPhase,
       });
       setTxHash(txResult.hash);
       return "registered";
@@ -276,10 +286,12 @@ export default function ClientDashboard() {
       return;
     }
 
+    const onPhase = beginTransaction("Registering milestones");
     try {
       const registration = await ensureMilestonesRegisteredOnChain(
         selectedJob,
-        selectedMilestones
+        selectedMilestones,
+        onPhase
       );
       if (registration === "registered") {
         setStatus(
@@ -292,6 +304,8 @@ export default function ClientDashboard() {
       }
     } catch (error) {
       setStatus(`Milestone registration failed: ${error.message}`);
+    } finally {
+      setTransaction(null);
     }
   };
 
@@ -300,11 +314,12 @@ export default function ClientDashboard() {
       setStatus("Load a job and connect the client wallet first.");
       return;
     }
+    const onPhase = beginTransaction("Approving and paying milestone");
     try {
       // Make sure milestones exist on-chain first (open jobs register them
       // lazily once a freelancer has accepted).
       try {
-        await ensureMilestonesRegisteredOnChain(selectedJob, selectedMilestones);
+        await ensureMilestonesRegisteredOnChain(selectedJob, selectedMilestones, onPhase);
       } catch (registerError) {
         setStatus(
           `Cannot approve yet: milestones are not registered on-chain. ${registerError.message}`
@@ -350,7 +365,8 @@ export default function ClientDashboard() {
       const txResult = await contracts.fundAndApproveOnChain(
         requireOnChainJobId(selectedJob),
         index,
-        normalizeWallet(address)
+        normalizeWallet(address),
+        { onPhase }
       );
       await api.approveMilestone(milestone.milestone_id, normalizeWallet(address));
 
@@ -371,6 +387,8 @@ export default function ClientDashboard() {
         ? `Approval failed on-chain. Fund escrow first, confirm this milestone is submitted, and approve with the client wallet. Details: ${error.message}`
         : `Approval failed: ${error.message}`;
       setStatus(message);
+    } finally {
+      setTransaction(null);
     }
   };
 
@@ -380,6 +398,7 @@ export default function ClientDashboard() {
       return;
     }
 
+    const onPhase = beginTransaction("Syncing milestone payment");
     try {
       const index = selectedMilestones.findIndex(
         (item) => Number(item.milestone_id) === Number(milestone.milestone_id)
@@ -418,11 +437,14 @@ export default function ClientDashboard() {
       await contracts.fundAndApproveOnChain(
         requireOnChainJobId(selectedJob),
         index,
-        normalizeWallet(address)
+        normalizeWallet(address),
+        { onPhase }
       );
       setStatus(`Synced on-chain payment for milestone ${milestone.milestone_id}.`);
     } catch (error) {
       setStatus(`Payment sync failed: ${error.message}`);
+    } finally {
+      setTransaction(null);
     }
   };
 
@@ -438,6 +460,7 @@ export default function ClientDashboard() {
       return;
     }
 
+    const onPhase = beginTransaction("Funding escrow");
     try {
       const currentBalance = toNumber(
         await contracts.getEscrowBalanceOnChain(requireOnChainJobId(selectedJob))
@@ -450,7 +473,8 @@ export default function ClientDashboard() {
       const txResult = await contracts.depositEscrowOnChain(
         requireOnChainJobId(selectedJob),
         address,
-        totalAmount - currentBalance
+        totalAmount - currentBalance,
+        { onPhase }
       );
       setTxHash(txResult.hash);
       setStatus(`Escrow funded for job ${selectedJob.job_id}. You can approve submitted milestones now.`);
@@ -459,6 +483,8 @@ export default function ClientDashboard() {
         ? "Escrow is already funded for this job."
         : `Escrow funding failed: ${error.message}`;
       setStatus(message);
+    } finally {
+      setTransaction(null);
     }
   };
 
@@ -476,6 +502,7 @@ export default function ClientDashboard() {
     }
 
     setIsFundingNewJob(true);
+    const onPhase = beginTransaction("Funding new job escrow");
     try {
       const currentBalance = toNumber(
         await contracts.getEscrowBalanceOnChain(requireOnChainJobId(job))
@@ -492,7 +519,8 @@ export default function ClientDashboard() {
       const txResult = await contracts.depositEscrowOnChain(
         requireOnChainJobId(job),
         address,
-        totalAmount - currentBalance
+        totalAmount - currentBalance,
+        { onPhase }
       );
       setTxHash(txResult.hash);
       setNewJobFunding(null);
@@ -512,6 +540,7 @@ export default function ClientDashboard() {
       setStatus(message);
     } finally {
       setIsFundingNewJob(false);
+      setTransaction(null);
     }
   };
 
@@ -557,6 +586,7 @@ export default function ClientDashboard() {
       setStatus("Connect wallet first.");
       return;
     }
+    const onPhase = beginTransaction("Creating job and funding escrow");
     try {
       let profile;
       try {
@@ -655,6 +685,7 @@ export default function ClientDashboard() {
             milestoneHashesHex: milestoneHashes,
             milestonePercentages: parsedMilestones.map((m) => m.percentage),
             milestoneDeadlines: parsedMilestones.map((m) => m.deadlineTs),
+            onPhase,
           });
 
           setTxHash(txResult.hash);
@@ -670,6 +701,7 @@ export default function ClientDashboard() {
             jobHashHex: result.job.job_hash,
             clientAddress: address,
             totalAmount,
+            onPhase,
           });
 
           setTxHash(txResult.hash);
@@ -690,11 +722,14 @@ export default function ClientDashboard() {
       }
     } catch (error) {
       setStatus(`Create failed: ${error.message}`);
+    } finally {
+      setTransaction(null);
     }
   };
 
   return (
     <div className="dashboard-container">
+      <TransactionLoader transaction={transaction} />
       <div className="dashboard-header">
         <h2>Client Dashboard</h2>
         <p className="subtitle">Search freelancers, monitor milestones, and release escrow payments on-chain.</p>
@@ -753,10 +788,10 @@ export default function ClientDashboard() {
                     <span>{selectedMilestones.length} milestones</span>
                   </div>
                   <div className="row-actions">
-                    <button className="ghost" onClick={registerSelectedJobMilestones}>
+                    <button className="ghost" onClick={registerSelectedJobMilestones} disabled={Boolean(transaction)}>
                       Register Milestones On-chain
                     </button>
-                    <button className="ghost" onClick={fundSelectedEscrow}>
+                    <button className="ghost" onClick={fundSelectedEscrow} disabled={Boolean(transaction)}>
                       Fund Escrow
                     </button>
                     <span className="inline-muted" style={{ fontWeight: 600, fontSize: "1.05rem", color: "var(--text)" }}>
@@ -775,7 +810,7 @@ export default function ClientDashboard() {
                           </span>
                         </div>
                         {milestone.status === "submitted" ? (
-                          <button onClick={() => approveMilestone(milestone)}>
+                          <button onClick={() => approveMilestone(milestone)} disabled={Boolean(transaction)}>
                             Approve &amp; Pay
                           </button>
                         ) : milestone.status === "approved" ? (
@@ -783,7 +818,7 @@ export default function ClientDashboard() {
                             <span className="status-pill status-pill-completed">
                               approved
                             </span>
-                            <button className="ghost" onClick={() => syncApprovedPaymentOnChain(milestone)}>
+                            <button className="ghost" onClick={() => syncApprovedPaymentOnChain(milestone)} disabled={Boolean(transaction)}>
                               Sync Payment
                             </button>
                           </div>
@@ -892,7 +927,7 @@ export default function ClientDashboard() {
                   <button type="button" className="ghost" onClick={addMilestone}>
                     + Add Milestone
                   </button>
-                  <button type="submit">Create Job</button>
+                  <button type="submit" disabled={Boolean(transaction)}>Create Job</button>
                 </div>
               </form>
             </section>
@@ -949,7 +984,7 @@ export default function ClientDashboard() {
               Job #{newJobFunding.job.job_id} was created, but its escrow still needs funding. Fund {getMilestoneTotal(newJobFunding.milestones).toLocaleString()} XLM now to make it ready for milestone payments.
             </p>
             <div className="row-actions" style={{ justifyContent: "center" }}>
-              <button onClick={fundNewlyCreatedJob} disabled={isFundingNewJob}>
+              <button onClick={fundNewlyCreatedJob} disabled={isFundingNewJob || Boolean(transaction)}>
                 {isFundingNewJob ? "Funding Escrow…" : "Fund This Job"}
               </button>
               <button className="ghost" onClick={() => setNewJobFunding(null)} disabled={isFundingNewJob}>

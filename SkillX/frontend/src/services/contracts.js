@@ -83,6 +83,7 @@ async function buildAndSendContractTx(
   args = [],
   options = {}
 ) {
+  const notifyPhase = options.onPhase || (() => {});
   ensureContractId(contractId, envName);
 
   const server = getServer();
@@ -108,6 +109,7 @@ async function buildAndSendContractTx(
     .build();
 
   const prepared = await server.prepareTransaction(tx);
+  notifyPhase("wallet");
   const signed = await signTransaction(prepared.toXDR(), {
     networkPassphrase
   });
@@ -118,14 +120,16 @@ async function buildAndSendContractTx(
   // from parsing between Freighter v4 and SDK v13 envelope formats.
   const signedXdr = signed.signedTxXdr || signed;
   const sent = await sendRawTransaction(signedXdr);
-  return waitForTransaction(server, sent, method);
+  notifyPhase("submitted");
+  return waitForTransaction(server, sent, method, notifyPhase);
 }
 
 async function sendRawTransaction(signedXdr) {
   return rpcRequest("sendTransaction", { transaction: signedXdr });
 }
 
-async function waitForTransaction(server, sent, method) {
+async function waitForTransaction(server, sent, method, notifyPhase = () => {}) {
+  notifyPhase("confirming");
   if (sent.errorResult) {
     throw new Error(`Transaction ${method} failed before submission: ${sent.errorResult}`);
   }
@@ -256,7 +260,7 @@ export const contracts = {
 
   // ─── JOB MANAGER ─────────────────────────────────────────────
 
-  async createJobOnChain({ jobIdHex, jobHashHex, clientAddress, totalAmount }) {
+  async createJobOnChain({ jobIdHex, jobHashHex, clientAddress, totalAmount, onPhase }) {
     ensureStellarAddress(clientAddress);
     return buildAndSendContractTx(
       jobManagerContractId,
@@ -268,7 +272,7 @@ export const contracts = {
         Address.fromString(clientAddress).toScVal(),
         nativeToScVal(totalAmount, { type: "i128" }),
       ],
-      { expectedSigner: clientAddress }
+      { expectedSigner: clientAddress, onPhase }
     );
   },
 
@@ -289,6 +293,7 @@ export const contracts = {
     milestoneHashesHex,
     milestonePercentages,
     milestoneDeadlines,
+    onPhase,
   }) {
     ensureStellarAddress(clientAddress);
     ensureStellarAddress(freelancerAddress);
@@ -310,7 +315,7 @@ export const contracts = {
           (milestoneDeadlines || []).map((d) => nativeToScVal(d, { type: "u64" }))
         ),
       ],
-      { expectedSigner: clientAddress }
+      { expectedSigner: clientAddress, onPhase }
     );
   },
 
@@ -324,7 +329,7 @@ export const contracts = {
    * MilestoneManager.add_milestones requires the CLIENT's auth and cannot be
    * satisfied inside the freelancer's accept transaction.
    */
-  async createAndFundJobOnChain({ jobIdHex, jobHashHex, clientAddress, totalAmount }) {
+  async createAndFundJobOnChain({ jobIdHex, jobHashHex, clientAddress, totalAmount, onPhase }) {
     ensureStellarAddress(clientAddress);
     return buildAndSendContractTx(
       jobManagerContractId,
@@ -340,7 +345,7 @@ export const contracts = {
     );
   },
 
-  async acceptJobOnChain(jobIdHex, freelancerAddress) {
+  async acceptJobOnChain(jobIdHex, freelancerAddress, options = {}) {
     ensureStellarAddress(freelancerAddress);
     return buildAndSendContractTx(
       jobManagerContractId,
@@ -350,7 +355,7 @@ export const contracts = {
         hexToBytesScVal(jobIdHex),
         Address.fromString(freelancerAddress).toScVal()
       ],
-      { expectedSigner: freelancerAddress }
+      { expectedSigner: freelancerAddress, onPhase: options.onPhase }
     );
   },
 
@@ -361,7 +366,7 @@ export const contracts = {
    * Idempotent: if the job is already InProgress and assigned to this
    * freelancer, it skips acceptance and just submits.
    */
-  async acceptAndSubmitOnChain(jobIdHex, milestoneIndex, freelancerAddress) {
+  async acceptAndSubmitOnChain(jobIdHex, milestoneIndex, freelancerAddress, options = {}) {
     ensureStellarAddress(freelancerAddress);
     return buildAndSendContractTx(
       jobManagerContractId,
@@ -372,17 +377,17 @@ export const contracts = {
         Address.fromString(freelancerAddress).toScVal(),
         nativeToScVal(milestoneIndex, { type: "u32" }),
       ],
-      { expectedSigner: freelancerAddress }
+      { expectedSigner: freelancerAddress, onPhase: options.onPhase }
     );
   },
 
-  async completeJobOnChain(jobIdHex, clientAddress) {
+  async completeJobOnChain(jobIdHex, clientAddress, options = {}) {
     return buildAndSendContractTx(
       jobManagerContractId,
       "VITE_JOB_MANAGER_CONTRACT_ID",
       "complete_job",
       [hexToBytesScVal(jobIdHex)],
-      clientAddress ? { expectedSigner: clientAddress } : {}
+      clientAddress ? { expectedSigner: clientAddress, onPhase: options.onPhase } : { onPhase: options.onPhase }
     );
   },
 
@@ -414,6 +419,7 @@ export const contracts = {
     milestoneHashesHex,
     milestonePercentages,
     milestoneDeadlines,
+    onPhase,
   }) {
     ensureStellarAddress(clientAddress);
     ensureStellarAddress(freelancerAddress);
@@ -438,7 +444,7 @@ export const contracts = {
     );
   },
 
-  async submitMilestoneOnChain(jobIdHex, milestoneIndex, freelancerAddress) {
+  async submitMilestoneOnChain(jobIdHex, milestoneIndex, freelancerAddress, options = {}) {
     return buildAndSendContractTx(
       milestoneManagerContractId,
       "VITE_MILESTONE_MANAGER_CONTRACT_ID",
@@ -447,11 +453,11 @@ export const contracts = {
         hexToBytesScVal(jobIdHex),
         nativeToScVal(milestoneIndex, { type: "u32" })
       ],
-      freelancerAddress ? { expectedSigner: freelancerAddress } : {}
+      freelancerAddress ? { expectedSigner: freelancerAddress, onPhase: options.onPhase } : { onPhase: options.onPhase }
     );
   },
 
-  async approveMilestoneOnChain(jobIdHex, milestoneIndex, clientAddress) {
+  async approveMilestoneOnChain(jobIdHex, milestoneIndex, clientAddress, options = {}) {
     return buildAndSendContractTx(
       milestoneManagerContractId,
       "VITE_MILESTONE_MANAGER_CONTRACT_ID",
@@ -470,7 +476,7 @@ export const contracts = {
    * client instead of two (deposit + approve_milestone). If escrow is already
    * fully funded (the normal case after create_full_job), no deposit happens.
    */
-  async fundAndApproveOnChain(jobIdHex, milestoneIndex, clientAddress) {
+  async fundAndApproveOnChain(jobIdHex, milestoneIndex, clientAddress, options = {}) {
     return buildAndSendContractTx(
       milestoneManagerContractId,
       "VITE_MILESTONE_MANAGER_CONTRACT_ID",
@@ -535,7 +541,7 @@ export const contracts = {
 
   // ─── ESCROW ─────────────────────────────────────────────────
 
-  async depositEscrowOnChain(jobIdHex, clientAddress, amount) {
+  async depositEscrowOnChain(jobIdHex, clientAddress, amount, options = {}) {
     ensureStellarAddress(clientAddress);
     return buildAndSendContractTx(
       escrowContractId,
@@ -546,7 +552,7 @@ export const contracts = {
         Address.fromString(clientAddress).toScVal(),
         nativeToScVal(amount, { type: "i128" })
       ],
-      { expectedSigner: clientAddress }
+      { expectedSigner: clientAddress, onPhase: options.onPhase }
     );
   },
 
