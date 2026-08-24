@@ -14,7 +14,14 @@
 | Feedback form | [SkillX User Feedback Form](https://docs.google.com/forms/d/e/1FAIpQLSffAdXqPWPjtufDt_UxySfMGKZCTgQSbW9UiDb0Wv4VFNiFYg/viewform?usp=publish-editor) |
 | Demo | [YouTube walkthrough](https://www.youtube.com/watch?v=SfhH32hAEAw) |
 
-> **Screenshots and product images are being refreshed soon.** Their update is tracked separately and does not block using or reviewing the application.
+![SkillX marketplace home page](Images/MainPage2.png)
+
+*SkillX marketplace home page.*
+
+![Mobile-responsive SkillX interface](Images/MobileResponsiveUI.png)
+
+*Mobile-responsive interface.*
+
 
 ## Highlights
 
@@ -49,7 +56,11 @@ The in-app [Feedback & Product Roadmap](/SkillX/frontend/src/pages/FeedbackRoadm
 | Show clearer, actionable errors when a transaction or sync is blocked | **Implemented** | Transaction and sync feedback has been improved. |
 | Add wallet transaction loading states | **Implemented** | Wallet actions expose loading feedback. |
 
-Feedback can be submitted through the [SkillX User Feedback Form](https://docs.google.com/forms/d/e/1FAIpQLSffAdXqPWPjtufDt_UxySfMGKZCTgQSbW9UiDb0Wv4VFNiFYg/viewform?usp=publish-editor) or the in-app feedback experience.
+Feedback can be submitted through the [SkillX User Feedback Form](https://docs.google.com/forms/d/e/1FAIpQLSffAdXqPWPjtufDt_UxySfMGKZCTgQSbW9UiDb0Wv4VFNiFYg/viewform?usp=publish-editor) or the in-app feedback experience. View [Form Responses](https://docs.google.com/spreadsheets/d/e/2PACX-1vQr-g61Nnj5PUoZ97tIkiYFG-JXYlKjUkpf98t1blK1flVpzsE5cDYxcIfWsZAMm5QorvSC19L4IhIt/pubhtml).
+
+![Feedback and product roadmap](Images/FeedbackPage.png)
+
+*Feedback and product roadmap.*
 
 ## Architecture
 
@@ -62,6 +73,10 @@ React + Vite + Freighter
 ```
 
 On-chain contracts manage lifecycle state, escrow balances, and payment rules. Supabase stores readable marketplace data such as profiles, skills, job details, and submission URLs.
+
+![Deployed Soroban contracts](Images/Deployed_contracts_screenshot.png)
+
+*Deployed Soroban contracts.*
 
 ## Repository structure
 
