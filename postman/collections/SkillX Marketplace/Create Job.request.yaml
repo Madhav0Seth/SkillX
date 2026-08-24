@@ -1,0 +1,19 @@
+$kind: http-request
+method: POST
+url: '{{baseUrl}}/job'
+order: 7000
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "client_wallet": "{{clientWallet}}",
+      "title": "Build a React dashboard",
+      "description": "Create a responsive dashboard with API integration.",
+      "milestones": [
+        {"name":"UI prototype","percentage":50,"amount":500,"deadline":"2030-01-15"},
+        {"name":"Production delivery","percentage":50,"amount":500,"deadline":"2030-02-15"}
+      ]
+    }

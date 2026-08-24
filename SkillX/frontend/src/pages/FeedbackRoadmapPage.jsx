@@ -3,7 +3,7 @@ const REQUESTS = [
   { summary: "Notify clients when a milestone is submitted for approval.", completed: false },
   { summary: "Make job posting, escrow funding, and milestone setup feel like one flow.", completed: true },
   { summary: "Add direct communication between the client and freelancer on a job.", completed: false },
-  { summary: "Add skill-based marketplace filtering for better job discovery.", completed: false },
+  { summary: "Add skill-based marketplace filtering for better job discovery.", completed: true },
   { summary: "Show clearer, actionable errors when a transaction or sync is blocked.", completed: true },
   { summary: "Add wallet transaction loading states", completed: true },
 ];

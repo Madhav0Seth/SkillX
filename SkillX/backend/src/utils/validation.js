@@ -49,6 +49,14 @@ function validateUrl(value, field) {
   return normalizeHttpUrl(value) ? null : `${field} must be a valid domain or HTTP(S) URL`;
 }
 
+function normalizeSkills(value) {
+  if (value === undefined || value === null) return [];
+  if (!Array.isArray(value) || value.length > 30) return null;
+  const normalized = value.map((skill) => typeof skill === "string" ? skill.trim().toLowerCase() : "");
+  if (normalized.some((skill) => !skill || skill.length > 80)) return null;
+  return [...new Set(normalized)];
+}
+
 function validateMilestones(value) {
   if (!Array.isArray(value) || value.length === 0 || value.length > 25) {
     return "milestones must contain between 1 and 25 items";
@@ -82,6 +90,7 @@ module.exports = {
   pageLimit,
   positiveId,
   requiredText,
+  normalizeSkills,
   validateMilestones,
   validateUrl,
 };

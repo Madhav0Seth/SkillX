@@ -109,6 +109,7 @@ export default function ClientDashboard() {
   const [freelancers, setFreelancers] = useState([]);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [skills, setSkills] = useState("");
   const [freelancerWallet, setFreelancerWallet] = useState("");
   const [milestones, setMilestones] = useState([emptyMilestone()]);
   const [myJobs, setMyJobs] = useState([]);
@@ -653,7 +654,8 @@ export default function ClientDashboard() {
         freelancer_wallet: normalizedFreelancerWallet || null,
         title,
         description,
-        milestones
+        milestones,
+        skills: skills.split(",").map((skill) => skill.trim()).filter(Boolean)
       };
       const result = await api.createJob(payload);
       const createdMilestones = result.milestones || parsedMilestones;
@@ -666,6 +668,7 @@ export default function ClientDashboard() {
       );
       setTitle("");
       setDescription("");
+      setSkills("");
       setFreelancerWallet("");
       setMilestones([emptyMilestone()]);
       setActiveTab("jobs");

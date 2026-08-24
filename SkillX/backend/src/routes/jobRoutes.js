@@ -9,7 +9,7 @@ const { badRequest, internalError, notFound } = require("../utils/http");
 function canonicalOnChainJobId(jobId) {
   return sha256(`skillx:soroban-job-id:v1:${jobId}`);
 }
-const { isWalletAddress, normalizeWallet, pageLimit, positiveId, requiredText, validateMilestones } = require("../utils/validation");
+const { isWalletAddress, normalizeWallet, normalizeSkills, pageLimit, positiveId, requiredText, validateMilestones } = require("../utils/validation");
 
 const router = express.Router();
 const JOB_JOIN_SELECT = `
@@ -36,8 +36,10 @@ async function findProfile(walletAddress) {
 
 router.get("/jobs", async (req, res) => {
   try {
-    const { freelancer_wallet, client_wallet, scope } = req.query;
+    const { freelancer_wallet, client_wallet, scope, skill } = req.query;
     const freelancerWallet = normalizeWallet(freelancer_wallet);
+    const normalizedSkill = typeof skill === "string" ? skill.trim() : "";
+    if (skill !== undefined && (!normalizedSkill || normalizedSkill.length > 80)) return badRequest(res, "skill must be a short string no longer than 80 characters");
     const clientWallet = normalizeWallet(client_wallet);
     const limit = pageLimit(req.query.limit);
     if (limit === null) return badRequest(res, "limit must be a positive integer no greater than 100");
@@ -51,6 +53,11 @@ router.get("/jobs", async (req, res) => {
       else query = query.or(`freelancer_wallet.eq.${freelancerWallet},freelancer_wallet.is.null`);
     } else if (scope === "open") query = query.is("freelancer_wallet", null);
     if (clientWallet) query = query.eq("client_wallet", clientWallet);
+    // `skills` is a Postgres text[] column. Filtering it with ilike makes
+    // PostgREST attempt a scalar text comparison and can fail with an array
+    // operator/type error. Use the native array overlap operator instead.
+    // Keep the filter optional so older rows (or callers without skill) work.
+    if (normalizedSkill) query = query.overlaps("skills", [normalizedSkill]);
     const { data, error } = await query;
     if (error) throw error;
     return res.json({ jobs: data || [] });
@@ -59,7 +66,9 @@ router.get("/jobs", async (req, res) => {
 
 router.post("/job", async (req, res) => {
   try {
-    const { client_wallet, freelancer_wallet, title, description, milestones } = req.body || {};
+    const { client_wallet, freelancer_wallet, title, description, milestones, skills } = req.body || {};
+    const normalizedSkills = normalizeSkills(skills);
+    if (normalizedSkills === null) return badRequest(res, "skills must be an array of up to 30 short strings (max 80 characters each)");
     const clientWallet = normalizeWallet(client_wallet);
     const freelancerWallet = freelancer_wallet ? normalizeWallet(freelancer_wallet) : null;
     const validationError =
@@ -73,7 +82,7 @@ router.post("/job", async (req, res) => {
     if (freelancerWallet && !hasRole(await findProfile(freelancerWallet), "freelancer")) return badRequest(res, "Selected wallet is not registered as a freelancer");
     const jobHash = sha256(JSON.stringify({ client_wallet: clientWallet, freelancer_wallet: freelancerWallet, title: title.trim(), description: description.trim() }));
     const normalizedMilestones = milestones.map(({ name, percentage, amount, deadline }) => ({ name: name.trim(), percentage: Number(percentage), amount: Number(amount), deadline }));
-    const { data, error } = await supabase.rpc("create_job_with_milestones", { p_client_wallet: clientWallet, p_freelancer_wallet: freelancerWallet, p_title: title.trim(), p_description: description.trim(), p_job_hash: jobHash, p_milestones: normalizedMilestones });
+    const { data, error } = await supabase.rpc("create_job_with_milestones", { p_client_wallet: clientWallet, p_freelancer_wallet: freelancerWallet, p_title: title.trim(), p_description: description.trim(), p_job_hash: jobHash, p_milestones: normalizedMilestones, p_skills: normalizedSkills });
     if (error) throw error;
     if (!data?.job?.job_id) {
       const configurationError = new Error("create_job_with_milestones returned an invalid result");

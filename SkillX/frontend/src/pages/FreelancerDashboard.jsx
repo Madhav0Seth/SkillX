@@ -209,6 +209,7 @@ export default function FreelancerDashboard() {
   const [assignedJobs, setAssignedJobs] = useState([]);
   const [completedJobs, setCompletedJobs] = useState([]);
   const [openJobs, setOpenJobs] = useState([]);
+  const [skillFilter, setSkillFilter] = useState("");
   const [milestones, setMilestones] = useState([]);
   const [milestoneId, setMilestoneId] = useState("");
   const [fileUrl, setFileUrl] = useState("");
@@ -439,6 +440,7 @@ export default function FreelancerDashboard() {
       const result = await api.getJobs({
         freelancer_wallet: walletAddress || undefined,
         scope: "open",
+        skill: skillFilter.trim() || undefined,
         limit: 30
       });
       const availableJobs = (result.jobs || []).filter(
@@ -798,7 +800,7 @@ export default function FreelancerDashboard() {
           {activeTab === "open" && (
             <section className="dashboard-section" ref={openJobsRef}>
               <header className="section-header"><span className="section-badge">02</span><h3>Open Jobs</h3></header>
-              <div className="row-actions" style={{ marginBottom: "1rem" }}><button onClick={loadOpenJobs}>Refresh Open Jobs</button></div>
+              <div className="row-actions" style={{ marginBottom: "1rem" }}><input value={skillFilter} onChange={(e) => setSkillFilter(e.target.value)} placeholder="Filter by skill" maxLength={80} /><button onClick={loadOpenJobs}>Refresh Open Jobs</button></div>
               <div className="workspace-card-section">
                 <div className="section-heading"><h3>Available Jobs</h3><span>{openJobs.length} jobs</span></div>
                 {openJobs.length > 0 ? <div className="stacked-list">{openJobs.map((item) => <JobCard key={item.job_id} job={item} onAccept={acceptJob} variant="open" />)}</div> : <EmptyState iconType="search" title="Browse Open Projects" message="Look for jobs posted by clients that don't have an assigned freelancer yet." action={<button className="ghost" onClick={loadOpenJobs} style={{ marginTop: "1rem" }}>Refresh Open Jobs</button>} />}

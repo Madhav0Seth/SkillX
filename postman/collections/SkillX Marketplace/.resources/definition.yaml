@@ -1,0 +1,15 @@
+$kind: collection
+name: SkillX Marketplace
+variables:
+  - key: baseUrl
+    value: 'http://localhost:3000'
+  - key: walletAddress
+    value: 'GXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
+  - key: freelancerWallet
+    value: 'GXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
+  - key: clientWallet
+    value: 'GXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
+  - key: jobId
+    value: '1'
+  - key: milestoneId
+    value: '1'

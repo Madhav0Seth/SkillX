@@ -95,6 +95,9 @@ export const api = {
     if (params.scope) {
       search.set("scope", params.scope);
     }
+    if (params.skill) {
+      search.set("skill", params.skill);
+    }
     const q = search.toString();
     return request(`/jobs${q ? `?${q}` : ""}`);
   },

@@ -21,12 +21,14 @@ create table if not exists jobs (
   title text not null,
   description text not null,
   job_hash text not null,
+  skills text[] not null default '{}',
   -- Canonical 32-byte identifier used by every Soroban contract lookup.
   -- job_hash remains the hash of the off-chain document and is not a storage key.
   on_chain_job_id text,
   created_at timestamptz not null default now()
 );
 
+alter table jobs add column if not exists skills text[] not null default '{}';
 alter table jobs add column if not exists on_chain_job_id text;
 alter table jobs drop constraint if exists jobs_on_chain_job_id_hex;
 alter table jobs
@@ -77,7 +79,8 @@ create or replace function create_job_with_milestones(
   p_title text,
   p_description text,
   p_job_hash text,
-  p_milestones jsonb
+  p_milestones jsonb,
+  p_skills text[] default '{}'
 ) returns jsonb
 language plpgsql
 as $$
@@ -87,8 +90,8 @@ declare
   v_created_milestones jsonb := '[]'::jsonb;
   v_item jsonb;
 begin
-  insert into jobs (client_wallet, freelancer_wallet, title, description, job_hash)
-  values (p_client_wallet, p_freelancer_wallet, p_title, p_description, p_job_hash)
+  insert into jobs (client_wallet, freelancer_wallet, title, description, job_hash, skills)
+  values (p_client_wallet, p_freelancer_wallet, p_title, p_description, p_job_hash, coalesce(p_skills, '{}'))
   returning * into v_job;
 
   for v_item in select value from jsonb_array_elements(p_milestones)

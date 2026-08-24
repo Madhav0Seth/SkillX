@@ -1,0 +1,10 @@
+$kind: http-request
+method: POST
+url: '{{baseUrl}}/submit'
+order: 12000
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: '{"milestone_id":{{milestoneId}},"freelancer_wallet":"{{freelancerWallet}}","file_url":"https://example.com/deliverable.zip"}'

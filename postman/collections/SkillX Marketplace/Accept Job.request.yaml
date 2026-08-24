@@ -1,0 +1,10 @@
+$kind: http-request
+method: POST
+url: '{{baseUrl}}/job/{{jobId}}/accept'
+order: 9000
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: '{"freelancer_wallet":"{{freelancerWallet}}"}'

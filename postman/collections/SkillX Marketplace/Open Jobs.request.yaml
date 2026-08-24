@@ -1,0 +1,4 @@
+$kind: http-request
+method: GET
+url: '{{baseUrl}}/jobs?scope=open&skill=javascript&limit=20'
+order: 6000

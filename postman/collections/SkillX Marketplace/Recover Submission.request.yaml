@@ -1,0 +1,10 @@
+$kind: http-request
+method: POST
+url: '{{baseUrl}}/submit/recover'
+order: 13000
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: '{"milestone_id":{{milestoneId}},"freelancer_wallet":"{{freelancerWallet}}"}'
