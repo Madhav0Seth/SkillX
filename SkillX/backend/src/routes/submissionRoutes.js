@@ -24,4 +24,27 @@ router.post("/submit", async (req, res) => {
   } catch (error) { return internalError(res, error); }
 });
 
+// The frontend verifies the matching Soroban milestone is Submitted before
+// calling this endpoint. This route deliberately performs no chain write: it
+// only reconciles local state and records that URL/details were unavailable.
+router.post("/submit/recover", async (req, res) => {
+  try {
+    const milestoneId = positiveId(req.body?.milestone_id);
+    const freelancerWallet = normalizeWallet(req.body?.freelancer_wallet);
+    if (!milestoneId || !isWalletAddress(freelancerWallet)) {
+      return badRequest(res, "milestone_id and a valid freelancer_wallet are required");
+    }
+    const { data, error } = await supabase.rpc("recover_submitted_milestone", {
+      p_milestone_id: milestoneId,
+      p_freelancer_wallet: freelancerWallet
+    });
+    if (error) throw error;
+    if (data?.error === "not_found") return notFound(res, "Milestone not found");
+    if (data?.error === "forbidden") return res.status(403).json({ error: "Only the assigned freelancer can recover this milestone" });
+    if (data?.error === "invalid_status") return badRequest(res, "Only a pending milestone can be recovered as submitted");
+    if (data?.error === "previous_incomplete") return badRequest(res, "Earlier milestones must be approved before recovery");
+    return res.json(data);
+  } catch (error) { return internalError(res, error); }
+});
+
 module.exports = router;

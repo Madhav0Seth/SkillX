@@ -50,10 +50,19 @@ create table if not exists milestones (
 create table if not exists submissions (
   submission_id bigint generated always as identity primary key,
   milestone_id bigint not null references milestones(milestone_id) on delete cascade,
-  submission_hash text not null,
-  file_url text not null,
+  submission_hash text,
+  file_url text,
+  recovery_note text,
   created_at timestamptz not null default now()
 );
+
+-- A recovered on-chain submission may not have a valid off-chain URL or
+-- metadata. Keep that absence explicit instead of inventing a submission.
+alter table submissions alter column submission_hash drop not null;
+alter table submissions alter column file_url drop not null;
+alter table submissions add column if not exists recovery_note text;
+create unique index if not exists idx_submissions_one_per_milestone
+  on submissions(milestone_id);
 
 create index if not exists idx_users_role on users(role);
 create index if not exists idx_jobs_client_wallet on jobs(client_wallet);
@@ -127,6 +136,50 @@ begin
   values (p_milestone_id, p_submission_hash, p_file_url) returning * into v_submission;
   update milestones set status = 'submitted' where milestone_id = p_milestone_id;
   return jsonb_build_object('submission', to_jsonb(v_submission));
+end;
+$$;
+
+-- Reconcile a database-Pending milestone only after the caller has verified
+-- the matching milestone is Submitted on-chain. No URL/hash is fabricated;
+-- a recovery marker makes the missing evidence visible to the client.
+create or replace function recover_submitted_milestone(
+  p_milestone_id bigint,
+  p_freelancer_wallet text
+) returns jsonb
+language plpgsql
+as $$
+declare
+  v_milestone milestones;
+  v_submission submissions;
+begin
+  select m.* into v_milestone from milestones m where m.milestone_id = p_milestone_id for update;
+  if not found then return jsonb_build_object('error', 'not_found'); end if;
+  if not exists (
+    select 1 from jobs
+    where job_id = v_milestone.job_id and freelancer_wallet = p_freelancer_wallet
+  ) then
+    return jsonb_build_object('error', 'forbidden');
+  end if;
+  if v_milestone.status = 'submitted' then
+    return jsonb_build_object('milestone', to_jsonb(v_milestone), 'already_recovered', true);
+  end if;
+  if v_milestone.status <> 'pending' then return jsonb_build_object('error', 'invalid_status'); end if;
+  if exists (
+    select 1 from milestones
+    where job_id = v_milestone.job_id and milestone_id < v_milestone.milestone_id and status <> 'approved'
+  ) then return jsonb_build_object('error', 'previous_incomplete'); end if;
+
+  update milestones set status = 'submitted'
+  where milestone_id = p_milestone_id returning * into v_milestone;
+  insert into submissions (milestone_id, recovery_note)
+  values (p_milestone_id, 'Recovered from confirmed on-chain Submitted status; submission URL/details were unavailable.')
+  on conflict (milestone_id) do nothing
+  returning * into v_submission;
+  return jsonb_build_object(
+    'milestone', to_jsonb(v_milestone),
+    'submission', to_jsonb(v_submission),
+    'recovered', true
+  );
 end;
 $$;
 

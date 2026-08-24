@@ -2412,9 +2412,85 @@ body {
   min-width: 0;
 }
 
+/* Keep the desktop/tablet header on one line without scrolling navigation. */
+@media (min-width: 861px) {
+  .topbar {
+    flex-wrap: nowrap;
+    gap: clamp(0.5rem, 1vw, 1rem);
+    padding-inline: clamp(1rem, 2vw, 2rem);
+  }
+
+  .topbar-menu {
+    min-width: 0;
+    margin-left: clamp(0.75rem, 2vw, 2rem);
+    gap: clamp(0.5rem, 1vw, 1rem);
+  }
+
+  .navlinks {
+    min-width: 0;
+    flex: 1 1 auto;
+    flex-wrap: nowrap;
+    gap: clamp(0.25rem, 1vw, 1.5rem);
+    overflow: visible;
+  }
+
+  .navlinks a {
+    flex: 0 1 auto;
+    white-space: nowrap;
+    padding-inline: clamp(0.4rem, 0.8vw, 0.75rem);
+  }
+
+  .walletbox,
+  .wallet-info {
+    flex: 0 0 auto;
+    flex-wrap: nowrap;
+  }
+
+  .walletbox > button,
+  .wallet-pill,
+  .balance-pill {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+}
+
+/* At constrained desktop/tablet widths, retain the account name and essential controls. */
+@media (min-width: 861px) and (max-width: 1180px) {
+  .topbar {
+    gap: 0.5rem;
+    padding-inline: 1rem;
+  }
+
+  .topbar-menu {
+    margin-left: 0.75rem;
+    gap: 0.5rem;
+  }
+
+  .navlinks {
+    gap: 0.25rem;
+  }
+
+  .navlinks a {
+    font-size: 1rem;
+    padding-inline: 0.4rem;
+  }
+
+  .wallet-info > .balance-pill {
+    display: none;
+  }
+
+  .walletbox {
+    gap: 0.5rem;
+  }
+
+  .walletbox > button:not(.theme-toggle) {
+    padding-inline: 0.8rem;
+    font-size: 0.95rem;
+  }
+}
+
 .navlinks {
   align-items: center;
-  flex-wrap: wrap;
 }
 
 .wallet-pill {

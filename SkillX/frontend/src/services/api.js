@@ -119,6 +119,12 @@ export const api = {
       body: JSON.stringify(payload)
     });
   },
+  recoverSubmittedMilestone(payload) {
+    return request("/submit/recover", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    });
+  },
   approveMilestone(milestoneId, client_wallet) {
     return request(`/milestone/${milestoneId}/approve`, {
       method: "POST",

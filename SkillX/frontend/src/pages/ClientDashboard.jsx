@@ -193,6 +193,15 @@ export default function ClientDashboard() {
         });
       });
 
+      // A recovered submission is intentionally reviewable even when its
+      // off-chain URL/details are absent; on-chain Submitted is authoritative.
+      const recoveredPending = (result.milestones || []).some(
+        (milestone) => milestone.status === "submitted"
+      );
+      if (recoveredPending) {
+        setStatus("Loaded submitted milestone(s) for review. If a submission URL/details are unavailable, the on-chain Submitted status is still authoritative.");
+      }
+
       // An accepted open job needs a client-signed registration before the
       // freelancer can submit. Attempt recovery on load, but keep the job
       // visible if the client wallet is not ready to sign.
@@ -655,6 +664,11 @@ export default function ClientDashboard() {
           ? previous
           : [result.job, ...previous]
       );
+      setTitle("");
+      setDescription("");
+      setFreelancerWallet("");
+      setMilestones([emptyMilestone()]);
+      setActiveTab("jobs");
 
       const milestoneHashes = await Promise.all(
         parsedMilestones.map((m) =>

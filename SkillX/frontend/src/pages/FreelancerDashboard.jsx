@@ -272,43 +272,49 @@ export default function FreelancerDashboard() {
     setTxHash("");
   };
 
-  const syncPaidMilestonesFromChain = async (nextJob, nextMilestones = []) => {
+  const syncMilestonesFromChain = async (nextJob, nextMilestones = []) => {
     if (!nextJob?.on_chain_job_id || !nextMilestones.length) {
-      return { job: nextJob, milestones: nextMilestones, syncedCount: 0 };
+      return { job: nextJob, milestones: nextMilestones, paidSyncedCount: 0, submittedRecoveredCount: 0 };
     }
 
-    const syncedMilestoneIds = [];
-    await Promise.all(
-      nextMilestones.map(async (milestone, index) => {
-        if (milestone.status === "approved") {
-          return;
-        }
-        const onChainMilestone = await contracts.getMilestoneOnChain(
-          requireOnChainJobId(nextJob),
-          index
+    const paidMilestoneIds = [];
+    const recoveredMilestoneIds = [];
+    // Process in order: recovery is only valid when all earlier milestones are
+    // already approved locally, matching the contract's sequential rules.
+    for (let index = 0; index < nextMilestones.length; index += 1) {
+      const milestone = nextMilestones[index];
+      if (milestone.status === "approved") continue;
+      const onChainMilestone = await contracts.getMilestoneOnChain(
+        requireOnChainJobId(nextJob),
+        index
+      );
+      if (!onChainMilestone) continue;
+      const onChainStatus = getMilestoneStatus(onChainMilestone);
+      if (onChainStatus === "paid") {
+        await api.approveMilestone(
+          milestone.milestone_id,
+          normalizeWallet(nextJob.client_wallet)
         );
-        if (!onChainMilestone) {
-          return;
-        }
-        if (getMilestoneStatus(onChainMilestone) === "paid") {
-          await api.approveMilestone(
-            milestone.milestone_id,
-            normalizeWallet(nextJob.client_wallet)
-          );
-          syncedMilestoneIds.push(milestone.milestone_id);
-        }
-      })
-    );
+        paidMilestoneIds.push(milestone.milestone_id);
+      } else if (onChainStatus === "submitted" && milestone.status === "pending") {
+        await api.recoverSubmittedMilestone({
+          milestone_id: milestone.milestone_id,
+          freelancer_wallet: walletAddress
+        });
+        recoveredMilestoneIds.push(milestone.milestone_id);
+      }
+    }
 
-    if (!syncedMilestoneIds.length) {
-      return { job: nextJob, milestones: nextMilestones, syncedCount: 0 };
+    if (!paidMilestoneIds.length && !recoveredMilestoneIds.length) {
+      return { job: nextJob, milestones: nextMilestones, paidSyncedCount: 0, submittedRecoveredCount: 0 };
     }
 
     const refreshed = await api.getJob(nextJob.job_id);
     return {
       job: refreshed.job,
       milestones: refreshed.milestones || [],
-      syncedCount: syncedMilestoneIds.length
+      paidSyncedCount: paidMilestoneIds.length,
+      submittedRecoveredCount: recoveredMilestoneIds.length
     };
   };
 
@@ -399,7 +405,7 @@ export default function FreelancerDashboard() {
       const hydratedJobs = await Promise.all(
         (result.jobs || []).map(async (item) => {
           const details = await api.getJob(item.job_id);
-          const synced = await syncPaidMilestonesFromChain(
+          const synced = await syncMilestonesFromChain(
             details.job,
             details.milestones || []
           );
@@ -453,7 +459,7 @@ export default function FreelancerDashboard() {
     setStatus("");
     try {
       const result = await api.getJob(jobId);
-      const synced = await syncPaidMilestonesFromChain(
+      const synced = await syncMilestonesFromChain(
         result.job,
         result.milestones || []
       );
@@ -462,9 +468,11 @@ export default function FreelancerDashboard() {
       setMilestoneId(getFirstSubmittableMilestoneId(synced.milestones || []));
       syncAssignedJobPlacement(synced.job, synced.milestones || []);
       setStatus(
-        synced.syncedCount
-          ? `Loaded job ${synced.job.job_id}. Payment received and synced.`
-          : `Loaded job ${synced.job.job_id}.`
+        synced.submittedRecoveredCount
+          ? `Loaded job ${synced.job.job_id}. Recovered ${synced.submittedRecoveredCount} on-chain submitted milestone(s); submission URL/details are unavailable.`
+          : synced.paidSyncedCount
+            ? `Loaded job ${synced.job.job_id}. Payment received and synced.`
+            : `Loaded job ${synced.job.job_id}.`
       );
     } catch (error) {
       setStatus(`Load failed: ${error.message}`);
@@ -480,7 +488,7 @@ export default function FreelancerDashboard() {
     }
     try {
       const result = await api.getJob(selectedJob.job_id);
-      const synced = await syncPaidMilestonesFromChain(
+      const synced = await syncMilestonesFromChain(
         result.job,
         result.milestones || []
       );
@@ -490,9 +498,11 @@ export default function FreelancerDashboard() {
       syncAssignedJobPlacement(synced.job, synced.milestones || []);
       if (!options.keepStatus) {
         setStatus(
-          synced.syncedCount
-            ? `Selected ${synced.job.title}. Payment received and synced. The submission area is ready.`
-            : `Selected ${synced.job.title}. The submission area is ready.`
+          synced.submittedRecoveredCount
+            ? `Selected ${synced.job.title}. Recovered ${synced.submittedRecoveredCount} on-chain submitted milestone(s); the client can review them, but submission URL/details are unavailable.`
+            : synced.paidSyncedCount
+              ? `Selected ${synced.job.title}. Payment received and synced. The submission area is ready.`
+              : `Selected ${synced.job.title}. The submission area is ready.`
         );
       }
       setActiveTab(isCompletedMilestoneSet(synced.milestones || []) ? "completed" : "ongoing");
@@ -574,7 +584,7 @@ export default function FreelancerDashboard() {
     try {
       const acceptState = await ensureOnChainAccepted(job, onPhase);
       const refreshed = await api.getJob(job.job_id);
-      const synced = await syncPaidMilestonesFromChain(
+      const synced = await syncMilestonesFromChain(
         refreshed.job,
         refreshed.milestones || []
       );
@@ -583,11 +593,13 @@ export default function FreelancerDashboard() {
       setMilestoneId(getFirstSubmittableMilestoneId(synced.milestones || []));
       syncAssignedJobPlacement(synced.job, synced.milestones || []);
       setStatus(
-        synced.syncedCount
-          ? "Payment received and synced. This job is now completed."
-          : acceptState === "accepted"
-            ? "On-chain acceptance synced. You can submit the next ready milestone now."
-            : "This job is already accepted on-chain. If the database milestone says submitted but the client sees pending, click Sync Submitted Milestone On-chain."
+        synced.submittedRecoveredCount
+          ? `Recovered ${synced.submittedRecoveredCount} on-chain submitted milestone(s). The client can review them; submission URL/details are unavailable.`
+          : synced.paidSyncedCount
+            ? "Payment received and synced. This job is now completed."
+            : acceptState === "accepted"
+              ? "On-chain acceptance synced. You can submit the next ready milestone now."
+              : "This job is already accepted on-chain. Refreshing also recovers any on-chain Submitted/database Pending milestone without another transaction."
       );
     } catch (error) {
       const message = error.message.includes("InvalidAction")
@@ -599,73 +611,44 @@ export default function FreelancerDashboard() {
     }
   };
 
-  const syncSubmittedMilestoneOnChain = async () => {
-    if (!walletAddress) {
-      setStatus("Connect wallet first.");
-      return;
-    }
-    if (!job) {
-      setStatus("Select an assigned job first.");
+  const recoverSubmittedMilestone = async () => {
+    if (!walletAddress || !job) {
+      setStatus("Connect the assigned freelancer wallet and select a job first.");
       return;
     }
     if (normalizeWallet(job.freelancer_wallet) !== walletAddress) {
-      setStatus("Only the assigned freelancer can sync milestone submission for this job.");
+      setStatus("Only the assigned freelancer can recover this milestone.");
       return;
     }
 
-    const index = milestones.findIndex((item) => item.status === "submitted");
-    if (index < 0) {
-      setStatus("No submitted database milestone needs on-chain sync.");
+    const pendingIndex = milestones.findIndex((item) => item.status === "pending");
+    if (pendingIndex < 0) {
+      setStatus("No pending database milestone needs recovery.");
       return;
     }
 
-    const onPhase = beginTransaction("Syncing milestone submission");
     try {
       const onChainMilestone = await contracts.getMilestoneOnChain(
         requireOnChainJobId(job),
-        index
+        pendingIndex
       );
-      if (!onChainMilestone) {
-        setStatus("Cannot sync submitted milestone: this job's milestones are not registered on-chain or the selected milestone is unavailable.");
-        return;
-      }
       const onChainStatus = getMilestoneStatus(onChainMilestone);
-      if (onChainStatus === "submitted") {
-        setStatus(`Milestone ${index} is already submitted on-chain. Waiting for client approval/payment.`);
+      if (onChainStatus !== "submitted") {
+        setStatus(`Recovery is not needed: on-chain milestone ${pendingIndex} is ${onChainStatus || "unknown"}, not Submitted.`);
         return;
       }
-      if (onChainStatus === "paid") {
-        await api.approveMilestone(
-          milestones[index].milestone_id,
-          normalizeWallet(job.client_wallet)
-        );
-        const refreshed = await api.getJob(job.job_id);
-        setJob(refreshed.job);
-        setMilestones(refreshed.milestones || []);
-        setMilestoneId(getFirstSubmittableMilestoneId(refreshed.milestones || []));
-        syncAssignedJobPlacement(refreshed.job, refreshed.milestones || []);
-        setStatus("Payment received on-chain. Database synced and job moved to Completed.");
-        return;
-      }
-      await ensureOnChainAccepted(job, onPhase);
-      if (onChainStatus !== "pending") {
-        setStatus(
-          `Cannot sync submitted milestone ${index}. On-chain status is ${onChainStatus || "unknown"}, but submit requires Pending.`
-        );
-        return;
-      }
-
-      await contracts.submitMilestoneOnChain(requireOnChainJobId(job), index, walletAddress, { onPhase });
+      await api.recoverSubmittedMilestone({
+        milestone_id: milestones[pendingIndex].milestone_id,
+        freelancer_wallet: walletAddress
+      });
       const refreshed = await api.getJob(job.job_id);
       setJob(refreshed.job);
       setMilestones(refreshed.milestones || []);
       setMilestoneId(getFirstSubmittableMilestoneId(refreshed.milestones || []));
       syncAssignedJobPlacement(refreshed.job, refreshed.milestones || []);
-      setStatus(`Synced milestone ${index} submission on-chain. Client can approve and pay now.`);
+      setStatus(`Recovered milestone ${pendingIndex} from its confirmed on-chain Submitted status. No submission URL/details were fabricated; the client can now review it.`);
     } catch (error) {
-      setStatus(`Submitted milestone sync failed: ${error.message}`);
-    } finally {
-      setTransaction(null);
+      setStatus(`Submitted milestone recovery failed: ${error.message}`);
     }
   };
 
@@ -805,7 +788,7 @@ export default function FreelancerDashboard() {
                     <JobCard job={job} isSelected />
                     {job.freelancer?.reputation && <div className="reputation-card" style={{ marginTop: "1rem" }}><div className="reputation-card-header"><span className="reputation-badge-title">Client Reputation Snapshot</span><span className="reputation-card-chip">{job.freelancer.reputation.tier || "New"}</span></div><div className="reputation-card-metrics"><span>{Number(job.freelancer.reputation.completed_jobs || 0)} completed</span><span>{Number(job.freelancer.reputation.ontime_delivery_pct || 0)}% on-time</span><span>{formatPayment(job.freelancer.reputation.total_value_settled || 0)} USDC</span></div><small className="reputation-badge-caption">{job.freelancer.reputation.summary || "Verified delivery history"}</small></div>}
                     {milestones.length > 0 && <div className="card compact-card" style={{ marginTop: "1rem" }}><h3>Milestones</h3><div style={{ display: "flex", flexDirection: "column", gap: "0.8rem", marginTop: "0.5rem" }}>{milestones.map((m, idx) => <div key={m.milestone_id} style={{ display: "flex", flexDirection: "column", gap: "0.2rem", padding: "0.6rem 0.8rem", border: "1.5px solid var(--border)", borderRadius: "var(--radius-sm)", background: "var(--surface-2)" }}><strong style={{ fontSize: "0.95rem", color: "var(--text)" }}>#{idx + 1} - {m.name}</strong><span style={{ fontSize: "0.85rem", color: "var(--muted)" }}>Status: <span style={{ fontWeight: 600, color: m.status === "approved" || m.status === "paid" ? "var(--crayon-green)" : m.status === "submitted" ? "var(--crayon-blue)" : "var(--crayon-orange)" }}>{m.status}</span>{canSubmitMilestone(milestones, idx) ? " (ready to submit)" : ""}</span></div>)}</div></div>}
-                    {normalizeWallet(job.freelancer_wallet) === walletAddress && <form ref={submissionFormRef} tabIndex={-1} className="grid-form compact-form" onSubmit={submitMilestone} style={{ marginTop: "1rem" }} aria-labelledby="submission-heading"><h3 id="submission-heading">Submit Completed Milestone</h3><p className="empty-state" role="status">{job.title} is selected. Submit your completed work below.</p><div className="row-actions"><button type="button" className={selectedJobNeedsSubmissionSync ? "" : "ghost"} onClick={syncSubmittedMilestoneOnChain} disabled={Boolean(transaction)}>Sync Submitted Milestone On-chain</button><button type="button" className="ghost" onClick={syncOnChainAccept} disabled={Boolean(transaction)}>Sync On-chain Accept</button></div><label style={{ marginTop: "1rem" }}>Completed milestone<select value={milestoneId} onChange={(e) => setMilestoneId(e.target.value)} required><option value="">Select milestone</option>{milestones.map((m, idx) => <option key={m.milestone_id} value={m.milestone_id} disabled={!canSubmitMilestone(milestones, idx)}>#{idx + 1} - {m.name} ({m.status})</option>)}</select></label><label>Submission URL<input value={fileUrl} onChange={(e) => setFileUrl(e.target.value)} placeholder="https://files.example/submission.zip" required /></label><button type="submit" disabled={!milestoneId || Boolean(transaction)}>Submit Milestone</button>{!milestoneId && <p className="empty-state">{getSubmissionHint(milestones)}</p>}</form>}
+                    {normalizeWallet(job.freelancer_wallet) === walletAddress && <form ref={submissionFormRef} tabIndex={-1} className="grid-form compact-form" onSubmit={submitMilestone} style={{ marginTop: "1rem" }} aria-labelledby="submission-heading"><h3 id="submission-heading">Submit Completed Milestone</h3><p className="empty-state" role="status">{job.title} is selected. Submit your completed work below.</p><div className="row-actions"><button type="button" className={selectedJobNeedsSubmissionSync ? "" : "ghost"} onClick={recoverSubmittedMilestone} disabled={Boolean(transaction)}>Recover On-chain Submitted Milestone</button><button type="button" className="ghost" onClick={syncOnChainAccept} disabled={Boolean(transaction)}>Sync On-chain Accept</button></div><label style={{ marginTop: "1rem" }}>Completed milestone<select value={milestoneId} onChange={(e) => setMilestoneId(e.target.value)} required><option value="">Select milestone</option>{milestones.map((m, idx) => <option key={m.milestone_id} value={m.milestone_id} disabled={!canSubmitMilestone(milestones, idx)}>#{idx + 1} - {m.name} ({m.status})</option>)}</select></label><label>Submission URL<input value={fileUrl} onChange={(e) => setFileUrl(e.target.value)} placeholder="https://files.example/submission.zip" required /></label><button type="submit" disabled={!milestoneId || Boolean(transaction)}>Submit Milestone</button>{!milestoneId && <p className="empty-state">{getSubmissionHint(milestones)}</p>}</form>}
                   </> : <EmptyState iconType="select" title="No Ongoing Job Selected" message="Select an ongoing job to view milestones, submit work, or sync on-chain statuses." />}
                 </aside>
               </div>
