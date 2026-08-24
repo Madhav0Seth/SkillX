@@ -2,217 +2,91 @@
 
 [![CI](https://github.com/Madhav0Seth/SkillX/actions/workflows/ci.yml/badge.svg)](https://github.com/Madhav0Seth/SkillX/actions/workflows/ci.yml)
 
-SkillX is a decentralized freelance marketplace built on Stellar Testnet. Clients create milestone-based jobs, lock funds in Soroban escrow, freelancers submit work, and payments are released only when milestones are approved.
+**SkillX** is a decentralized freelance marketplace on **Stellar Testnet**. It combines a polished React experience with Soroban smart contracts so clients can fund milestone escrow, freelancers can submit work, and payments are released after approval.
 
 ## Links
 
 | Resource | Link |
 | --- | --- |
-| GitHub repository | [github.com/Madhav0Seth/SkillX](https://github.com/Madhav0Seth/SkillX) |
 | Live app | [skill-x-nu.vercel.app](https://skill-x-nu.vercel.app/) |
-| Public Job Marketplace | [skill-x-nu.vercel.app/marketplace](https://skill-x-nu.vercel.app/marketplace) |
+| Public marketplace | [Browse open jobs](https://skill-x-nu.vercel.app/marketplace) |
 | Backend API | [skillx-tqzb.onrender.com](https://skillx-tqzb.onrender.com) |
-| User Feedback Google Form | [SkillX Feedback Form](https://docs.google.com/forms/d/e/1FAIpQLSffAdXqPWPjtufDt_UxySfMGKZCTgQSbW9UiDb0Wv4VFNiFYg/viewform?usp=publish-editor) |
-| Demo video | [YouTube demo](https://www.youtube.com/watch?v=SfhH32hAEAw) |
+| Feedback form | [SkillX User Feedback Form](https://docs.google.com/forms/d/e/1FAIpQLSffAdXqPWPjtufDt_UxySfMGKZCTgQSbW9UiDb0Wv4VFNiFYg/viewform?usp=publish-editor) |
+| Demo | [YouTube walkthrough](https://www.youtube.com/watch?v=SfhH32hAEAw) |
 
-## Preview
+> **Screenshots and product images are being refreshed soon.** Their update is tracked separately and does not block using or reviewing the application.
 
-![SkillX main page](Images/MainPage.png)
+## Highlights
 
-## What We Built
+- **Decentralized marketplace:** discover open work, create jobs, and connect clients with freelancers.
+- **Stellar + Soroban:** escrow, job, milestone, and reputation contracts are deployed on Stellar Testnet.
+- **Milestone escrow workflow:** create a job, fund escrow, accept work, submit milestones, approve delivery, and release payment.
+- **Profiles and discovery:** roles, skills, portfolios, avatars, activity stats, reputation badges, freelancer browsing, and skill-based job filtering.
+- **Responsive dashboards:** dedicated client and freelancer workflows with mobile-friendly layouts and refresh feedback.
+- **Notifications and transaction UX:** milestone-submission notifications, loading states, actionable errors, and transaction status links.
+- **Full-stack foundation:** React + Vite frontend, Express API, Supabase persistence, and Rust/Soroban contracts.
+- **UX polish:** public marketplace access, in-app feedback collection, themed feedback status icons, and a logged-in HomePage SkillX handwriting animation.
 
-- React + Vite frontend with Freighter wallet connection.
-- Public Job Marketplace (`/marketplace`) allowing users to browse open jobs without connecting wallet first.
-- In-App User Feedback Widget (`📝 Feedback` button & modal) for collecting Level 5 ratings and user suggestions.
-- Mobile responsive client, freelancer, profile, role, and marketplace UI.
-- Express + Supabase backend for profiles, jobs, milestones, submissions, avatars, and reputation data.
-- Soroban smart contracts for escrow, jobs, milestones, and reputation.
-- On-chain job creation, escrow funding, job acceptance, milestone submission, milestone approval, payment release, and refunds.
-- Client dashboard for browsing freelancers, posting jobs, funding escrow, and approving milestone payments.
-- Freelancer dashboard for viewing open jobs, accepting work, submitting milestones, and tracking payment state.
-- Profile system with roles, skills, portfolio, avatar upload/crop, testnet balance, activity stats, and reputation badges.
-- Transaction status modals with Stellar Expert transaction links.
-- GitHub Actions CI for frontend, backend, and contract checks.
+## How it works
 
-### Mobile Responsive UI
+1. Connect a Freighter wallet on Stellar Testnet and create a client, freelancer, or dual-role profile.
+2. A client creates a job with optional skills and one or more milestones, then funds escrow.
+3. A freelancer discovers and accepts the job, then submits milestone work.
+4. The client is notified, reviews the submission, and approves the milestone.
+5. Soroban escrow releases the approved payment; dashboard and profile activity refresh to reflect the new state.
 
-![SkillX mobile responsive view](Images/MobileResponsiveSS.png)
+## Feedback-driven improvements
 
----
+The in-app [Feedback & Product Roadmap](/SkillX/frontend/src/pages/FeedbackRoadmapPage.jsx) tracks seven community requests. Status below reflects the implemented application code and roadmap entries.
 
-## 🔵 Level 5 Blue Belt — User Growth & Feedback Analysis
+| Feedback item | Status | Current outcome |
+| --- | --- | --- |
+| Reduce unnecessary wallet transactions and improve sync reliability | **Implemented** | Key job and milestone actions use consolidated on-chain flows and dashboard refresh UX. |
+| Notify clients when a milestone is submitted for approval | **Implemented** | Milestone submission notifications are available in the client workflow. |
+| Make job posting, escrow funding, and milestone setup feel like one flow | **Implemented** | The job creation flow combines setup and escrow-oriented actions. |
+| Add direct communication between client and freelancer on a job | **Under review** | Tracked as an open roadmap request; no chat feature is claimed. |
+| Add skill-based marketplace filtering for better job discovery | **Implemented** | Jobs support optional skills and marketplace filtering. |
+| Show clearer, actionable errors when a transaction or sync is blocked | **Implemented** | Transaction and sync feedback has been improved. |
+| Add wallet transaction loading states | **Implemented** | Wallet actions expose loading feedback. |
 
-As part of Level 5 requirements, we conducted a comprehensive user onboarding campaign collecting testnet wallet addresses, email contacts, full names, role choices, rating scores (1-5), and feedback from testnet users.
-
-- **Google Feedback Form:** [SkillX User Feedback Form](https://docs.google.com/forms/d/e/1FAIpQLSffAdXqPWPjtufDt_UxySfMGKZCTgQSbW9UiDb0Wv4VFNiFYg/viewform?usp=publish-editor)
-
-### 📈 Feedback Summary & Product Iterations
-
-| User Feedback Collected | Product Improvement Implemented | Git Commit Link |
-|---|---|---|
-| *"Hard to see open jobs without connecting wallet first"* | Created public `/marketplace` route for browsing open jobs | [`feat: add public job marketplace page`](https://github.com/Madhav0Seth/SkillX/commit/main) |
-| *"Would like a feedback button right inside the app"* | Added floating `📝 Feedback` button & modal in navbar | [`feat: add in-app feedback modal`](https://github.com/Madhav0Seth/SkillX/commit/main) |
-| *"Mobile dashboard layout needed polish"* | Complete mobile responsive overhaul for all pages | [`feat: enhance responsive design`](https://github.com/Madhav0Seth/SkillX/commit/4086bf1) |
-| *"Star ratings & reviews after job completion"* | Connected deployed Soroban Reputation smart contract | [`feat: add reputation contract`](https://github.com/Madhav0Seth/SkillX/commit/c101bcf) |
-| *"Show platform statistics on landing page"* | Animated live platform statistics overview | [`feat: implement user profile popups`](https://github.com/Madhav0Seth/SkillX/commit/85e041b) |
-| *"Too many wallet transactions to post a job / approve work"* | Merged multi-step on-chain flows into single atomic transactions (one wallet signature per action) via new `create_full_job`, `accept_and_submit`, and `fund_and_approve` contract entrypoints | [`feat: batch on-chain flows into single transactions`](https://github.com/Madhav0Seth/SkillX/commit/main) |
-
-### 🚀 Future Roadmap (Level 6 & Beyond)
-
-1. **Automated Escrow Refund Timers:** Time-locked automatic refund fallback for unassigned jobs on Soroban.
-2. **Multi-Asset Payments:** Support for USDC/EURC escrow payments alongside XLM on Stellar.
-3. **Decentralized Dispute Resolution:** Multi-sig DAO arbitrator council for contested milestones.
-
----
-
-## Deployed Contracts
-
-All contracts are deployed on Stellar Testnet.
-
-| Contract | Contract ID | WASM Hash | Deploy Tx | Stellar Expert |
-| --- | --- | --- | --- | --- |
-| Escrow | `CCPSEXCCYNIEYIDHZA774T6WQM3KXTLTETOI762G4USMTYFZXTVJKI4B` | `06ee004b4104f104c21ebe46b93a322af9c8babad2ced2d34ec8b0c66e39b55b` | [`59bff661…`](https://stellar.expert/explorer/testnet/tx/59bff6612635d8a51c085a508411196a7e5ec0ed9dc686ea2152b9fda3014168) | [View contract](https://stellar.expert/explorer/testnet/contract/CCPSEXCCYNIEYIDHZA774T6WQM3KXTLTETOI762G4USMTYFZXTVJKI4B) |
-| Job Manager | `CB7YQMFJIKEEK3G4554JGDH3EIKJY3VN4ZT7CSDEKLH6WCECOV727IWC` | `fc4a183a498852211ffb40e35b684901a1844e569e3f400c5fd5c5ec18c1d9c3` | [`eb85365c…`](https://stellar.expert/explorer/testnet/tx/eb85365c5628875e70cfdafccc0f83405ab0516a71b02ab1cf145e158cd770b0) | [View contract](https://stellar.expert/explorer/testnet/contract/CB7YQMFJIKEEK3G4554JGDH3EIKJY3VN4ZT7CSDEKLH6WCECOV727IWC) |
-| Milestone Manager | `CDSVTVOJET5YEVYXDOUHCQKA7C7PBSSYFMM3HS4NQVX3EAWCZIZWZMZ4` | `4b805f1c38afba1529f6c2e9913c17253cb8f93a10214aeedb5feed17b72b2e3` | [`5cfe68f9…`](https://stellar.expert/explorer/testnet/tx/5cfe68f97262fab025e6615401ebd75c87b7c20229bbce5a43a34cc3ff8c781b) | [View contract](https://stellar.expert/explorer/testnet/contract/CDSVTVOJET5YEVYXDOUHCQKA7C7PBSSYFMM3HS4NQVX3EAWCZIZWZMZ4) |
-| Reputation | `CAKQDKSSNVVBLBCHHL22Q3PDZ6VDGAUM2ERND4OKJ2VCL6JDDL4YZSUN` | — | — | [View contract](https://stellar.expert/explorer/testnet/contract/CAKQDKSSNVVBLBCHHL22Q3PDZ6VDGAUM2ERND4OKJ2VCL6JDDL4YZSUN) |
-
-### Stellar Expert Proof
-
-![Job Manager and Escrow contracts on Stellar Expert](Images/Job_manager_and_escrow_contracts.png)
-
-![Reputation and Milestone Manager contracts on Stellar Expert](Images/Reputation_and_milestone_manager_contracts.png)
-
-The UI uses Job Manager, Milestone Manager, and Escrow directly for the active marketplace flow. Reputation is included in the deployed contract suite, while the current profile reputation badges and activity stats are also computed from Supabase job and milestone history.
-
-## How SkillX Works
-
-1. A user connects a Freighter wallet on Stellar Testnet.
-2. The user creates or updates a profile as a client, freelancer, or both.
-3. A client creates a job with one or more milestones.
-4. The backend stores readable job details in Supabase and the frontend sends hashes/state to Soroban.
-5. The client funds escrow on-chain.
-6. A freelancer accepts the job.
-7. The freelancer submits milestones in order.
-8. The client reviews and approves submitted milestones.
-9. Escrow releases payment to the freelancer.
-10. Completed work appears in profile activity and reputation stats.
+Feedback can be submitted through the [SkillX User Feedback Form](https://docs.google.com/forms/d/e/1FAIpQLSffAdXqPWPjtufDt_UxySfMGKZCTgQSbW9UiDb0Wv4VFNiFYg/viewform?usp=publish-editor) or the in-app feedback experience.
 
 ## Architecture
 
-### System Overview
-
-```mermaid
-flowchart LR
-  User[Client / Freelancer] --> UI[React + Vite Frontend]
-  UI --> Wallet[Freighter Wallet]
-  UI --> API[Express Backend]
-  API --> DB[(Supabase)]
-  UI --> RPC[Stellar Soroban RPC]
-  RPC --> Job[Job Manager Contract]
-  RPC --> Milestone[Milestone Manager Contract]
-  RPC --> Escrow[Escrow Contract]
-  RPC --> Reputation[Reputation Contract]
-  Job --> Escrow
-  Job --> Milestone
-  Milestone --> Reputation
+```text
+React + Vite + Freighter
+        │
+        ├── Express API ── Supabase (profiles, jobs, milestones, submissions)
+        │
+        └── Stellar Soroban ── Job Manager, Milestone Manager, Escrow, Reputation
 ```
 
-### Job Lifecycle
+On-chain contracts manage lifecycle state, escrow balances, and payment rules. Supabase stores readable marketplace data such as profiles, skills, job details, and submission URLs.
 
-```mermaid
-sequenceDiagram
-  participant C as Client
-  participant UI as SkillX Frontend
-  participant API as Backend API
-  participant J as Job Manager
-  participant M as Milestone Manager
-  participant E as Escrow
-  participant F as Freelancer
-
-  C->>UI: Create job and milestones
-  UI->>API: Store job metadata
-  UI->>J: Create job on-chain
-  UI->>M: Register milestones
-  UI->>E: Deposit escrow funds
-  F->>UI: Accept open job
-  UI->>J: Accept job
-  F->>UI: Submit completed milestone
-  UI->>M: Mark milestone submitted
-  C->>UI: Approve milestone
-  UI->>M: Approve milestone
-  UI->>E: Release milestone payment
-```
-
-### On-chain vs Off-chain Data
-
-```mermaid
-flowchart TB
-  subgraph OnChain[On-chain Soroban]
-    A[Job status]
-    B[Milestone hashes and status]
-    C[Escrow balances]
-    D[Payment release rules]
-    E[Reputation updates]
-  end
-
-  subgraph OffChain[Off-chain Supabase]
-    F[Profile name, role, avatar]
-    G[Skills and portfolio]
-    H[Job title and description]
-    I[Submission URLs]
-    J[Dashboard metadata]
-  end
-
-  OffChain --> UI[Frontend UI]
-  OnChain --> UI
-```
-
-### Frontend Pages
-
-```mermaid
-flowchart TD
-  Start[Start Page] --> Market[Public Marketplace]
-  Start --> Home[Home]
-  Home --> Role[Role / Profile Setup]
-  Home --> Client[Client Dashboard]
-  Home --> Freelancer[Freelancer Dashboard]
-  Home --> Profile[Profile Page]
-  Client --> Browse[Browse Freelancers]
-  Client --> Create[Create Job]
-  Client --> Approve[Approve Milestones]
-  Freelancer --> Open[Browse Open Jobs]
-  Freelancer --> Submit[Submit Milestones]
-  Profile --> Stats[Balance, Jobs, Reputation]
-```
-
-## Repository Structure
+## Repository structure
 
 ```text
 SkillX/
-├── backend/
-│   ├── src/
-│   └── supabase-schema.sql
-├── contracts/
+├── frontend/       # React + Vite application
+├── backend/        # Express + Supabase API
+├── contracts/      # Rust/Soroban contracts
 │   ├── escrow/
 │   ├── job_manager/
 │   ├── milestone_manager/
 │   └── reputation/
-├── frontend/
-│   └── src/
 └── Cargo.toml
 ```
 
-## Local Setup
+## Local setup
 
-### Requirements
+### Prerequisites
 
 - Node.js and npm
-- Rust + Cargo
-- Freighter wallet browser extension
-- Stellar Testnet wallet funded with test XLM
-- Supabase project
+- Rust and Cargo
+- A Supabase project
+- Freighter browser extension and funded Stellar Testnet wallets for on-chain flows
 
-### Backend
+### 1. Configure and run the backend
 
 ```bash
 cd SkillX/backend
@@ -226,15 +100,13 @@ Create `SkillX/backend/.env`:
 PORT=4000
 SUPABASE_URL=your_supabase_project_url
 SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+# Optional for deployed clients; defaults to http://localhost:5173 in development
+CORS_ORIGIN=http://localhost:5173
 ```
 
-Run the database schema in Supabase:
+Run `SkillX/backend/supabase-schema.sql` in the Supabase SQL editor before using the API.
 
-```text
-SkillX/backend/supabase-schema.sql
-```
-
-### Frontend
+### 2. Configure and run the frontend
 
 ```bash
 cd SkillX/frontend
@@ -254,129 +126,43 @@ VITE_MILESTONE_MANAGER_CONTRACT_ID=CDSVTVOJET5YEVYXDOUHCQKA7C7PBSSYFMM3HS4NQVX3E
 VITE_XLM_SAC_CONTRACT_ID=CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC
 ```
 
-### Contracts
-
-```bash
-cd SkillX
-cargo test -p escrow-contract
-cargo test -p job-manager-contract
-cargo test -p milestone-manager-contract
-cargo test -p reputation-contract
-```
-
-## Important Backend API Routes
-
-| Method | Route | Purpose |
-| --- | --- | --- |
-| `GET` | `/health` | Backend health check |
-| `POST` | `/profile` | Create or update a user profile |
-| `GET` | `/profile/:walletAddress` | Get profile by wallet |
-| `GET` | `/profile/:walletAddress/stats` | Get profile activity and reputation stats |
-| `GET` | `/freelancers?category=react` | Browse freelancers by skill/category |
-| `POST` | `/job` | Create job metadata and milestones |
-| `GET` | `/jobs` | List jobs by client, freelancer, or scope |
-| `GET` | `/job/:jobId` | Get one job with milestones |
-| `POST` | `/job/:jobId/accept` | Accept a job as freelancer |
-| `POST` | `/submit` | Submit milestone work URL |
-| `POST` | `/milestone/:milestoneId/approve` | Approve milestone in backend state |
-
-## Main Contract Calls
-
-Frontend contract calls live in:
-
-```text
-SkillX/frontend/src/services/contracts.js
-```
-
-Single-transaction (one wallet signature) calls used by the current UI:
-
-- `createFullJobOnChain(...)` — creates the job, funds escrow, and registers milestones in one transaction.
-- `acceptAndSubmitOnChain(...)` — accepts the job (idempotent) and submits a milestone in one transaction.
-- `fundAndApproveOnChain(...)` — tops up escrow if short and approves a milestone in one transaction.
-
-Individual calls also available:
-
-- `createJobOnChain(...)`
-- `depositEscrowOnChain(...)`
-- `addMilestonesOnChain(...)`
-- `acceptJobOnChain(...)`
-- `submitMilestoneOnChain(...)`
-- `approveMilestoneOnChain(...)`
-- `getEscrowBalanceOnChain(...)`
-- `getJobOnChain(...)`
-- `getMilestoneOnChain(...)`
-- `getJobStatusOnChain(...)`
-
-## Deployment
-
-| Service | Platform | URL |
-| --- | --- | --- |
-| Frontend | Vercel | [https://skill-x-nu.vercel.app/](https://skill-x-nu.vercel.app/) |
-| Backend | Render | [https://skillx-tqzb.onrender.com](https://skillx-tqzb.onrender.com) |
-| Database | Supabase | Project private |
-| Contracts | Stellar Testnet | Links in contract table |
-
-### Render Backend
-
-```text
-Root Directory: SkillX/backend
-Build Command: npm install
-Start Command: npm start
-```
-
-Required environment variables:
-
-```env
-NODE_ENV=production
-SUPABASE_URL=your_supabase_project_url
-SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
-```
-
-### Vercel Frontend
-
-```text
-Framework Preset: Vite
-Root Directory: SkillX/frontend
-Build Command: npm run build
-Output Directory: dist
-```
-
-Required environment variables:
-
-```env
-VITE_API_BASE_URL=https://skillx-tqzb.onrender.com
-VITE_SOROBAN_RPC_URL=https://soroban-testnet.stellar.org
-VITE_NETWORK_PASSPHRASE=Test SDF Network ; September 2015
-VITE_ESCROW_CONTRACT_ID=CCPSEXCCYNIEYIDHZA774T6WQM3KXTLTETOI762G4USMTYFZXTVJKI4B
-VITE_JOB_MANAGER_CONTRACT_ID=CB7YQMFJIKEEK3G4554JGDH3EIKJY3VN4ZT7CSDEKLH6WCECOV727IWC
-VITE_MILESTONE_MANAGER_CONTRACT_ID=CDSVTVOJET5YEVYXDOUHCQKA7C7PBSSYFMM3HS4NQVX3EAWCZIZWZMZ4
-VITE_XLM_SAC_CONTRACT_ID=CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC
-```
-
-## Testing and Verification
+### 3. Verify the project
 
 ```bash
 cd SkillX/frontend
 npm run build
-```
 
-```bash
-cd SkillX
+cd ..
 cargo test -p escrow-contract
 cargo test -p job-manager-contract
 cargo test -p milestone-manager-contract
 cargo test -p reputation-contract
 ```
 
-GitHub Actions also runs project checks from:
+## API at a glance
 
-```text
-.github/workflows/ci.yml
-```
+| Method | Route | Purpose |
+| --- | --- | --- |
+| `GET` | `/health` | Health check |
+| `POST` | `/profile` | Create or update a profile |
+| `GET` | `/freelancers?category=react` | Browse freelancers by skill/category |
+| `POST` | `/job` | Create job metadata and milestones |
+| `GET` | `/jobs` | List marketplace jobs |
+| `POST` | `/job/:jobId/accept` | Accept a job |
+| `POST` | `/submit` | Submit milestone work |
+| `POST` | `/milestone/:milestoneId/approve` | Approve milestone state |
 
-## Notes
+## Deployed contracts
 
-- Keep `.env` files private.
-- Never commit private keys, seed phrases, or Supabase service keys.
-- Use funded Stellar Testnet wallets for both client and freelancer flows.
-- Use Stellar Expert links to verify deployed contracts and transaction hashes.
+| Contract | Stellar Testnet contract |
+| --- | --- |
+| Escrow | [`CCPSEX…JKI4B`](https://stellar.expert/explorer/testnet/contract/CCPSEXCCYNIEYIDHZA774T6WQM3KXTLTETOI762G4USMTYFZXTVJKI4B) |
+| Job Manager | [`CB7YQM…7IWC`](https://stellar.expert/explorer/testnet/contract/CB7YQMFJIKEEK3G4554JGDH3EIKJY3VN4ZT7CSDEKLH6WCECOV727IWC) |
+| Milestone Manager | [`CDSVTV…ZMZ4`](https://stellar.expert/explorer/testnet/contract/CDSVTVOJET5YEVYXDOUHCQKA7C7PBSSYFMM3HS4NQVX3EAWCZIZWZMZ4) |
+| Reputation | [`CAKQDK…ZSUN`](https://stellar.expert/explorer/testnet/contract/CAKQDKSSNVVBLBCHHL22Q3PDZ6VDGAUM2ERND4OKJ2VCL6JDDL4YZSUN) |
+
+## Security notes
+
+- Keep `.env` files, private keys, seed phrases, and Supabase service-role keys out of version control.
+- The backend README documents the current wallet-identity boundary; add server-side signed-challenge verification before exposing mutations publicly.
+- Use funded Stellar Testnet wallets for client and freelancer transaction flows.
