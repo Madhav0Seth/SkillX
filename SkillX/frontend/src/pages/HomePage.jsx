@@ -39,8 +39,19 @@ export default function HomePage() {
           <span className="home-kicker">
             {hasProfile ? `Welcome back, ${firstName}` : "Profile setup required"}
           </span>
-          <h1>
-            Welcome to <span>SkillX</span>
+          <h1 className="home-brand-heading">
+            Welcome to{" "}
+            <span className="home-brand-mark" aria-label="SkillX">
+              <span className="home-brand-letter" aria-hidden="true">S</span>
+              <span className="home-brand-letter" aria-hidden="true">k</span>
+              <span className="home-brand-letter" aria-hidden="true">i</span>
+              <span className="home-brand-letter" aria-hidden="true">l</span>
+              <span className="home-brand-letter" aria-hidden="true">l</span>
+              <span className="home-brand-letter" aria-hidden="true">X</span>
+              <svg className="home-brand-underline" viewBox="0 0 180 18" aria-hidden="true" focusable="false">
+                <path d="M4 10 C38 15, 72 4, 108 10 S151 14, 176 7" pathLength="1" />
+              </svg>
+            </span>
           </h1>
           <p>
             A polished Web3 workspace for hiring, freelancing, milestone tracking,

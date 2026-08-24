@@ -1,6 +1,6 @@
 const REQUESTS = [
   { summary: "Reduce unnecessary wallet transactions and improve sync reliability.", completed: true },
-  { summary: "Notify clients when a milestone is submitted for approval.", completed: false },
+  { summary: "Notify clients when a milestone is submitted for approval.", completed: true },
   { summary: "Make job posting, escrow funding, and milestone setup feel like one flow.", completed: true },
   { summary: "Add direct communication between the client and freelancer on a job.", completed: false },
   { summary: "Add skill-based marketplace filtering for better job discovery.", completed: true },
@@ -86,7 +86,16 @@ export default function FeedbackRoadmapPage() {
             <p>{request.summary}</p>
             <div className="feedback-request-footnote">
               <span>{request.completed ? "Closed item" : "Queued next"}</span>
-              <span>{request.completed ? "Already shipped ✅" : "In active dev 🔄"}</span>
+              <span className={`feedback-request-state ${request.completed ? "feedback-request-state-complete" : "feedback-request-state-progress"}`}>
+                <span className="feedback-request-state-icon" aria-hidden="true">
+                  {request.completed ? (
+                    <svg viewBox="0 0 24 24" focusable="false"><path d="m5 12 4 4L19 6" /></svg>
+                  ) : (
+                    <svg viewBox="0 0 24 24" focusable="false"><path d="M12 6v6l4 2" /><circle cx="12" cy="12" r="8.5" /></svg>
+                  )}
+                </span>
+                <span>{request.completed ? "Already shipped" : "In active development"}</span>
+              </span>
             </div>
           </article>
         ))}

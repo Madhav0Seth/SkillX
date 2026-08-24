@@ -32,9 +32,7 @@ async function request(path, options = {}) {
     });
   } catch (error) {
     if (error.name === "AbortError") throw new Error("The API request timed out. Please try again.");
-    throw new Error(
-      "Cannot reach the backend API. Please try again later."
-    );
+    throw new Error(error.message || "Cannot reach the backend API. Please try again later.");
   } finally {
     window.clearTimeout(timeout);
   }
@@ -103,6 +101,9 @@ export const api = {
   },
   getJob(jobId) {
     return request(`/job/${jobId}`);
+  },
+  getClientNotifications(client_wallet) {
+    return request(`/notifications?client_wallet=${encodeURIComponent(client_wallet)}`);
   },
   acceptJob(jobId, freelancer_wallet) {
     return request(`/job/${jobId}/accept`, {

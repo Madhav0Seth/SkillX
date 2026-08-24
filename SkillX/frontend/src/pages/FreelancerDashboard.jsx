@@ -216,6 +216,7 @@ export default function FreelancerDashboard() {
   const [status, setStatus] = useState("");
   const [txHash, setTxHash] = useState("");
   const [transaction, setTransaction] = useState(null);
+  const [refreshing, setRefreshing] = useState({ assigned: false, open: false });
 
   const beginTransaction = (action) => {
     setTransaction({ action, phase: "wallet" });
@@ -392,6 +393,7 @@ export default function FreelancerDashboard() {
   };
 
   const loadMyJobs = async () => {
+    setRefreshing((current) => ({ ...current, assigned: true }));
     setStatus("");
     if (!walletAddress) {
       setStatus("Connect wallet first.");
@@ -431,10 +433,13 @@ export default function FreelancerDashboard() {
       }
     } catch (error) {
       setStatus(`My jobs fetch failed: ${error.message}`);
+    } finally {
+      setRefreshing((current) => ({ ...current, assigned: false }));
     }
   };
 
   const loadOpenJobs = async () => {
+    setRefreshing((current) => ({ ...current, open: true }));
     setStatus("");
     try {
       const result = await api.getJobs({
@@ -453,6 +458,8 @@ export default function FreelancerDashboard() {
       setActiveTab("open");
     } catch (error) {
       setStatus(`Open jobs fetch failed: ${error.message}`);
+    } finally {
+      setRefreshing((current) => ({ ...current, open: false }));
     }
   };
 
@@ -773,7 +780,7 @@ export default function FreelancerDashboard() {
                 <h3>Ongoing Jobs</h3>
               </header>
               <div className="row-actions" style={{ marginBottom: "1rem" }}>
-                <button onClick={loadMyJobs}>Refresh Ongoing Jobs</button>
+                <button onClick={loadMyJobs} disabled={refreshing.assigned} aria-busy={refreshing.assigned} aria-label={refreshing.assigned ? "Refreshing ongoing jobs" : "Refresh ongoing jobs"}>{refreshing.assigned && <span className="refresh-spinner" aria-hidden="true" />}<span>{refreshing.assigned ? "Refreshing…" : "Refresh Ongoing Jobs"}</span></button>
                 <input value={jobId} onChange={(e) => setJobId(e.target.value)} placeholder="Enter job ID" />
                 <button className="ghost" onClick={loadJob}>Load Job</button>
               </div>
@@ -800,7 +807,7 @@ export default function FreelancerDashboard() {
           {activeTab === "open" && (
             <section className="dashboard-section" ref={openJobsRef}>
               <header className="section-header"><span className="section-badge">02</span><h3>Open Jobs</h3></header>
-              <div className="row-actions" style={{ marginBottom: "1rem" }}><input value={skillFilter} onChange={(e) => setSkillFilter(e.target.value)} placeholder="Filter by skill" maxLength={80} /><button onClick={loadOpenJobs}>Refresh Open Jobs</button></div>
+              <div className="row-actions" style={{ marginBottom: "1rem" }}><input value={skillFilter} onChange={(e) => setSkillFilter(e.target.value)} placeholder="Filter by skill" maxLength={80} /><button onClick={loadOpenJobs} disabled={refreshing.open} aria-busy={refreshing.open} aria-label={refreshing.open ? "Refreshing open jobs" : "Refresh open jobs"}>{refreshing.open && <span className="refresh-spinner" aria-hidden="true" />}<span>{refreshing.open ? "Refreshing…" : "Refresh Open Jobs"}</span></button></div>
               <div className="workspace-card-section">
                 <div className="section-heading"><h3>Available Jobs</h3><span>{openJobs.length} jobs</span></div>
                 {openJobs.length > 0 ? <div className="stacked-list">{openJobs.map((item) => <JobCard key={item.job_id} job={item} onAccept={acceptJob} variant="open" />)}</div> : <EmptyState iconType="search" title="Browse Open Projects" message="Look for jobs posted by clients that don't have an assigned freelancer yet." action={<button className="ghost" onClick={loadOpenJobs} style={{ marginTop: "1rem" }}>Refresh Open Jobs</button>} />}
@@ -811,7 +818,7 @@ export default function FreelancerDashboard() {
           {activeTab === "completed" && (
             <section className="dashboard-section">
               <header className="section-header"><span className="section-badge">03</span><h3>Completed Jobs</h3></header>
-              <div className="row-actions" style={{ marginBottom: "1rem" }}><button onClick={loadMyJobs}>Refresh Completed Jobs</button></div>
+              <div className="row-actions" style={{ marginBottom: "1rem" }}><button onClick={loadMyJobs} disabled={refreshing.assigned} aria-busy={refreshing.assigned} aria-label={refreshing.assigned ? "Refreshing completed jobs" : "Refresh completed jobs"}>{refreshing.assigned && <span className="refresh-spinner" aria-hidden="true" />}<span>{refreshing.assigned ? "Refreshing…" : "Refresh Completed Jobs"}</span></button></div>
               <div className="workspace-card-section">
                 <div className="section-heading"><h3>Completed Jobs</h3><span>{completedJobs.length} jobs</span></div>
                 {completedJobs.length > 0 ? <div className="stacked-list">{completedJobs.map((item) => <JobCard key={item.job_id} job={item} variant="completed" statusLabel="Completed" statusTone="completed" paymentAmount={formatPayment(getPaymentTotal(item.milestones))} />)}</div> : <EmptyState iconType="jobs" title="No Completed Jobs" message="Completed jobs will appear here after all milestones are approved and paid." />}

@@ -2,6 +2,68 @@
    SKILLX CRAYON & MATTE PAPER DESIGN SYSTEM
    ========================================================================== */
 
+.refresh-spinner {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  margin-right: 0.5rem;
+  border: 3px dotted currentColor;
+  border-radius: 50%;
+  animation: refresh-spinner-rotate 0.9s steps(8, end) infinite;
+  vertical-align: -0.15em;
+  transform: rotate(-8deg);
+}
+
+.feedback-request-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-weight: 700;
+}
+
+.feedback-request-state-complete { color: var(--crayon-green); }
+.feedback-request-state-progress { color: var(--crayon-orange); }
+
+.feedback-request-state-icon {
+  display: inline-flex;
+  width: 1.15rem;
+  height: 1.15rem;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+
+.feedback-request-state-icon svg {
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.25;
+}
+
+.feedback-request-state-progress .feedback-request-state-icon svg {
+  animation: feedback-state-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes feedback-state-pulse {
+  50% { transform: scale(1.08); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .feedback-request-state-progress .feedback-request-state-icon svg { animation: none; }
+}
+
+@keyframes refresh-spinner-rotate {
+  to { transform: rotate(352deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .refresh-spinner { animation-duration: 1.8s; }
+}
+
+
 :root,
 [data-theme="light"],
 :root[data-theme="light"],
@@ -561,6 +623,85 @@ body {
 .home-hero h1 span {
   color: var(--crayon-purple);
   text-shadow: 3px 3px 0 var(--crayon-yellow);
+}
+
+/* Authenticated home only: write the brand, then finish with a crayon underline. */
+.home-brand-heading {
+  min-height: 1.9em;
+}
+
+.home-brand-mark {
+  position: relative;
+  display: inline-block;
+  padding-bottom: 0.16em;
+  white-space: nowrap;
+}
+
+.home-brand-letter {
+  display: inline-block;
+  opacity: 0;
+  transform: translateY(0.12em) rotate(-4deg) scale(0.94);
+  transform-origin: 50% 80%;
+  animation: home-brand-write 0.34s cubic-bezier(0.22, 0.8, 0.32, 1) forwards;
+}
+
+.home-brand-letter:nth-child(1) { animation-delay: 0.08s; }
+.home-brand-letter:nth-child(2) { animation-delay: 0.28s; }
+.home-brand-letter:nth-child(3) { animation-delay: 0.48s; }
+.home-brand-letter:nth-child(4) { animation-delay: 0.68s; }
+.home-brand-letter:nth-child(5) { animation-delay: 0.88s; }
+.home-brand-letter:nth-child(6) { animation-delay: 1.08s; }
+
+.home-brand-underline {
+  position: absolute;
+  left: -0.04em;
+  bottom: -0.02em;
+  width: calc(100% + 0.08em);
+  height: 0.22em;
+  overflow: visible;
+}
+
+.home-brand-underline path {
+  fill: none;
+  stroke: var(--crayon-pink);
+  stroke-width: 3.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: home-brand-underline-draw 0.52s ease-out 1.48s forwards;
+}
+
+@keyframes home-brand-write {
+  0% {
+    opacity: 0;
+    transform: translateY(0.12em) rotate(-4deg) scale(0.94);
+  }
+  70% {
+    opacity: 1;
+    transform: translateY(-0.025em) rotate(1deg) scale(1.02);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) rotate(0deg) scale(1);
+  }
+}
+
+@keyframes home-brand-underline-draw {
+  to { stroke-dashoffset: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-brand-letter {
+    opacity: 1;
+    transform: none;
+    animation: none;
+  }
+
+  .home-brand-underline path {
+    stroke-dashoffset: 0;
+    animation: none;
+  }
 }
 
 .home-hero p {

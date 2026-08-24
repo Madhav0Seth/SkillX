@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import TransactionLoader from "../components/TransactionLoader";
 import { api } from "../services/api";
 import { contracts, requireOnChainJobId } from "../services/contracts";
@@ -120,6 +120,57 @@ export default function ClientDashboard() {
   const [newJobFunding, setNewJobFunding] = useState(null);
   const [isFundingNewJob, setIsFundingNewJob] = useState(false);
   const [transaction, setTransaction] = useState(null);
+  const [notifications, setNotifications] = useState([]);
+  const [dismissedNotificationIds, setDismissedNotificationIds] = useState(() => {
+    try { return new Set(JSON.parse(localStorage.getItem("skillx-dismissed-notifications") || "[]")); }
+    catch { return new Set(); }
+  });
+  const [isRefreshingJobs, setIsRefreshingJobs] = useState(false);
+
+  const refreshNotifications = async () => {
+    if (!address) return;
+    try {
+      const notificationResult = await api.getClientNotifications(address);
+      setNotifications(notificationResult.notifications || []);
+    } catch (notificationError) {
+      setNotifications([]);
+      console.warn("Notifications unavailable:", notificationError);
+    }
+  };
+
+  const dismissNotification = (notificationId) => {
+    setDismissedNotificationIds((current) => {
+      const next = new Set(current);
+      next.add(notificationId);
+      localStorage.setItem("skillx-dismissed-notifications", JSON.stringify([...next]));
+      return next;
+    });
+  };
+
+  const refreshClientData = async () => {
+    if (!address) { setStatus("Connect wallet first."); return; }
+    setIsRefreshingJobs(true);
+    try {
+      const jobsResult = await api.getJobs({ client_wallet: address, limit: 30 });
+      setMyJobs(jobsResult.jobs || []);
+      if (selectedJob) {
+        const refreshed = await api.getJob(selectedJob.job_id);
+        setSelectedJob(refreshed.job);
+        setSelectedMilestones(refreshed.milestones || []);
+      }
+      await refreshNotifications();
+      setStatus("Jobs, milestones, and notifications refreshed.");
+    } catch (error) {
+      setStatus(`Refresh failed: ${error.message}`);
+    } finally { setIsRefreshingJobs(false); }
+  };
+
+  useEffect(() => {
+    if (!address) { setNotifications([]); return undefined; }
+    refreshNotifications();
+    const timer = window.setInterval(refreshNotifications, 15000);
+    return () => window.clearInterval(timer);
+  }, [address]);
 
   const beginTransaction = (action) => {
     setTransaction({ action, phase: "wallet" });
@@ -775,6 +826,28 @@ export default function ClientDashboard() {
                 <h3>Manage Jobs &amp; Escrow</h3>
               </header>
 
+              {notifications.filter((notification) => !dismissedNotificationIds.has(notification.notification_id)).length > 0 && (
+                <div className="card notification-banner" role="status" style={{ marginBottom: "1rem", borderLeft: "4px solid var(--crayon-blue)" }}>
+                  <strong>New milestone notification</strong>
+                  {notifications.filter((notification) => !dismissedNotificationIds.has(notification.notification_id)).slice(0, 5).map((notification) => (
+                    <div key={notification.notification_id} style={{ display: "flex", justifyContent: "space-between", gap: "1rem", alignItems: "center" }}>
+                      <p style={{ margin: "0.35rem 0 0" }}>{notification.message}</p>
+                      <button className="ghost" onClick={() => dismissNotification(notification.notification_id)} aria-label="Dismiss notification">Dismiss</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="row-actions" style={{ marginBottom: "1rem" }}>
+                <button
+                  onClick={refreshClientData}
+                  disabled={isRefreshingJobs}
+                  aria-busy={isRefreshingJobs}
+                  aria-label={isRefreshingJobs ? "Refreshing jobs and milestones" : "Refresh jobs and milestones"}
+                >
+                  {isRefreshingJobs && <span className="refresh-spinner" aria-hidden="true" />}
+                  <span>{isRefreshingJobs ? "Refreshing…" : "Refresh Jobs & Milestones"}</span>
+                </button>
+              </div>
               <div className="card">
                 <h3>Your Previous Jobs</h3>
                 {myJobs.length === 0 ? (

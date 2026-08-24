@@ -6,6 +6,24 @@ const { isWalletAddress, normalizeWallet, positiveId, validateUrl } = require(".
 
 const router = express.Router();
 
+router.get("/notifications", async (req, res) => {
+  try {
+    const clientWallet = normalizeWallet(req.query?.client_wallet);
+    if (!isWalletAddress(clientWallet)) return badRequest(res, "A valid client_wallet is required");
+    const { data, error } = await supabase.from("notifications").select("*").eq("client_wallet", clientWallet).order("created_at", { ascending: false }).limit(50);
+    if (error) {
+      // Notifications are optional for reads: an older deployment may not
+      // have the table yet. Keep the jobs dashboard usable while surfacing
+      // other database failures to the caller.
+      if (error.code === "42P01" || error.code === "PGRST205") {
+        return res.json({ notifications: [], notificationsUnavailable: true });
+      }
+      throw error;
+    }
+    return res.json({ notifications: data || [] });
+  } catch (error) { return internalError(res, error); }
+});
+
 router.post("/submit", async (req, res) => {
   try {
     const milestoneId = positiveId(req.body?.milestone_id);
