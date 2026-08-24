@@ -189,6 +189,8 @@ function formatPayment(amount) {
 export default function FreelancerDashboard() {
   const { address } = useWallet();
   const walletAddress = normalizeWallet(address);
+  const [activeTab, setActiveTab] = useState("ongoing");
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [jobId, setJobId] = useState("");
   const [job, setJob] = useState(null);
   const [assignedJobs, setAssignedJobs] = useState([]);
@@ -199,8 +201,6 @@ export default function FreelancerDashboard() {
   const [fileUrl, setFileUrl] = useState("");
   const [status, setStatus] = useState("");
   const [txHash, setTxHash] = useState("");
-  const [activeTab, setActiveTab] = useState("ongoing");
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   const openJobsRef = useRef(null);
   const assignedJobsRef = useRef(null);
@@ -389,9 +389,7 @@ export default function FreelancerDashboard() {
       if (!hydratedJobs.length) {
         setStatus("No jobs are assigned to your wallet yet.");
       }
-      setTimeout(() => {
-        assignedJobsRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-      }, 150);
+      setActiveTab("ongoing");
     } catch (error) {
       setStatus(`My jobs fetch failed: ${error.message}`);
     }
@@ -412,9 +410,7 @@ export default function FreelancerDashboard() {
       if (!availableJobs.length) {
         setStatus("No open jobs found yet.");
       }
-      setTimeout(() => {
-        openJobsRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-      }, 150);
+      setActiveTab("open");
     } catch (error) {
       setStatus(`Open jobs fetch failed: ${error.message}`);
     }
@@ -467,9 +463,7 @@ export default function FreelancerDashboard() {
             : `Selected job ${synced.job.job_id}.`
         );
       }
-      setTimeout(() => {
-        detailPaneRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-      }, 150);
+      setActiveTab(isCompletedMilestoneSet(synced.milestones || []) ? "completed" : "ongoing");
     } catch (error) {
       setStatus(`Select failed: ${error.message}`);
     }
@@ -513,10 +507,10 @@ export default function FreelancerDashboard() {
       setAssignedJobs((prev) =>
         prev.some((item) => item.job_id === selectedJob.job_id)
           ? prev.map((item) =>
-              item.job_id === selectedJob.job_id
-                ? acceptedResult.job
-                : item
-            )
+            item.job_id === selectedJob.job_id
+              ? acceptedResult.job
+              : item
+          )
           : [acceptedResult.job, ...prev]
       );
     } catch (error) {
@@ -553,8 +547,8 @@ export default function FreelancerDashboard() {
         synced.syncedCount
           ? "Payment received and synced. This job is now completed."
           : acceptState === "accepted"
-          ? "On-chain acceptance synced. You can submit the next ready milestone now."
-          : "This job is already accepted on-chain. If the database milestone says submitted but the client sees pending, click Sync Submitted Milestone On-chain."
+            ? "On-chain acceptance synced. You can submit the next ready milestone now."
+            : "This job is already accepted on-chain. If the database milestone says submitted but the client sees pending, click Sync Submitted Milestone On-chain."
       );
     } catch (error) {
       const message = error.message.includes("InvalidAction")
@@ -696,277 +690,80 @@ export default function FreelancerDashboard() {
 
   return (
     <div className="dashboard-container">
+      <div className="dashboard-header">
+        <h2>Freelancer Dashboard</h2>
+        <p className="subtitle">Accept open jobs, submit milestones, and check on-chain payments.</p>
+      </div>
+
       <div className={`workspace-layout ${!isSidebarOpen ? "is-collapsed" : ""}`}>
         <WorkspaceSidebar
           label="Freelancer workspace"
           activeId={activeTab}
-          onChange={(tab) => {
-            setActiveTab(tab);
-            if (tab === "open") loadOpenJobs();
-            else loadMyJobs();
-          }}
+          onChange={setActiveTab}
           isOpen={isSidebarOpen}
           onToggle={() => setIsSidebarOpen((current) => !current)}
           items={[
-            { id: "ongoing", label: "My Jobs", icon: <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" strokeWidth="2" fill="none"><path d="M4 7h16v13H4z" /><path d="M8 7V5a4 4 0 0 1 8 0v2" /><path d="M4 12h16" /></svg> },
-            { id: "open", label: "Open Jobs", icon: <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" strokeWidth="2" fill="none"><circle cx="11" cy="11" r="7" /><path d="m16 16 4 4" /></svg> }
+            { id: "ongoing", label: "Ongoing Jobs", icon: <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" strokeWidth="2" fill="none"><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M7 8h10M7 12h7M7 16h4" /></svg> },
+            { id: "open", label: "Open Jobs", icon: <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" strokeWidth="2" fill="none"><path d="M12 5v14M5 12h14" /><circle cx="12" cy="12" r="9" /></svg> },
+            { id: "completed", label: "Completed Jobs", icon: <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" strokeWidth="2" fill="none"><path d="m5 12 4 4L19 6" /><circle cx="12" cy="12" r="9" /></svg> }
           ]}
         />
 
         <main className="workspace-main">
-          <div className="dashboard-header">
-            <h2>Freelancer Dashboard</h2>
-            <p className="subtitle">Accept open jobs, submit milestones, and check on-chain payments.</p>
-          </div>
-
-          {/* SECTION 1: SEARCH & LOAD JOBS */}
-          <section className="dashboard-section" style={{ marginTop: 0 }}>
-            <header className="section-header">
-              <span className="section-badge">01</span>
-              <h3>Job Controls</h3>
-            </header>
-
-            <div className="card" style={{ border: "none", boxShadow: "none", padding: 0, background: "transparent", gap: "1rem" }}>
-              <h3>Load and Filter Jobs</h3>
-              <div className="row-actions">
-                <button onClick={() => { setActiveTab("ongoing"); loadMyJobs(); }}>View My Jobs</button>
-                <button className="ghost" onClick={() => { setActiveTab("open"); loadOpenJobs(); }}>View Open Jobs</button>
-                <input
-                  value={jobId}
-                  onChange={(e) => setJobId(e.target.value)}
-                  placeholder="Enter job ID"
-                />
-                <button onClick={() => { setActiveTab("ongoing"); loadJob(); }}>Load Job</button>
+          {activeTab === "ongoing" && (
+            <section className="dashboard-section">
+              <header className="section-header">
+                <span className="section-badge">01</span>
+                <h3>Ongoing Jobs</h3>
+              </header>
+              <div className="row-actions" style={{ marginBottom: "1rem" }}>
+                <button onClick={loadMyJobs}>Refresh Ongoing Jobs</button>
+                <input value={jobId} onChange={(e) => setJobId(e.target.value)} placeholder="Enter job ID" />
+                <button className="ghost" onClick={loadJob}>Load Job</button>
               </div>
-            </div>
-          </section>
-
-          {/* SECTION 2: WORKSPACE */}
-          <section className="dashboard-section">
-            <header className="section-header">
-              <span className="section-badge">02</span>
-              <h3>Freelancer Workspace</h3>
-            </header>
-
-            <div className="freelancer-workspace">
-              <div className="job-list-pane">
-                {activeTab === "ongoing" && (
-                  <>
-                    <div className="workspace-card-section" ref={assignedJobsRef}>
-              <div className="section-heading">
-                <h3>Assigned to Me</h3>
-                <span>{assignedJobs.length} jobs</span>
-              </div>
-              {assignedJobs.length > 0 ? (
-                <div className="stacked-list">
-                  {assignedJobs.map((item) => (
-                    <JobCard
-                      key={item.job_id}
-                      job={item}
-                      onSelect={selectJob}
-                      isSelected={job?.job_id === item.job_id}
-                      variant="assigned"
-                      statusLabel="In Progress"
-                      statusTone="assigned"
-                    />
-                  ))}
-                </div>
-              ) : (
-                <EmptyState
-                  iconType="jobs"
-                  title="No Assigned Jobs"
-                  message="Jobs assigned to your wallet will appear here. Click load to fetch your workspace."
-                  action={<button onClick={loadMyJobs} style={{ marginTop: "1rem" }}>View My Jobs</button>}
-                />
-              )}
-            </div>
-
-            <div className="workspace-card-section">
-              <div className="section-heading">
-                <h3>Completed Jobs</h3>
-                <span>{completedJobs.length} jobs</span>
-              </div>
-              {completedJobs.length > 0 ? (
-                <div className="stacked-list">
-                  {completedJobs.map((item) => (
-                    <JobCard
-                      key={item.job_id}
-                      job={item}
-                      onSelect={selectJob}
-                      isSelected={job?.job_id === item.job_id}
-                      variant="completed"
-                      statusLabel="Completed"
-                      statusTone="completed"
-                      paymentAmount={formatPayment(getPaymentTotal(item.milestones))}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <EmptyState
-                  iconType="jobs"
-                  title="No Completed Jobs"
-                  message="Once you finish all milestones for a job and receive your payout, it will appear here."
-                />
-              )}
-            </div>
-
-                </>
-              )}
-
-              {activeTab === "open" && (
-                <div className="workspace-card-section" ref={openJobsRef}>
-                  <div className="section-heading">
-                <h3>Open Jobs</h3>
-                <span>{openJobs.length} jobs</span>
-              </div>
-              {openJobs.length > 0 ? (
-                <div className="stacked-list">
-                  {openJobs.map((item) => (
-                    <JobCard
-                      key={item.job_id}
-                      job={item}
-                      onSelect={selectJob}
-                      isSelected={job?.job_id === item.job_id}
-                      onAccept={acceptJob}
-                      variant="open"
-                    />
-                  ))}
-                </div>
-              ) : (
-                <EmptyState
-                  iconType="search"
-                  title="Browse Open Projects"
-                  message="Look for jobs posted by clients that don't have an assigned freelancer yet."
-                  action={<button className="ghost" onClick={loadOpenJobs} style={{ marginTop: "1rem" }}>View Open Jobs</button>}
-                />
-              )}
-                </div>
-              )}
-            </div>
-
-          <aside className="job-detail-pane" ref={detailPaneRef}>
-            {job ? (
-              <>
-                <div className="section-heading">
-                  <h3>Selected Job</h3>
-                  <span>Job #{job.job_id}</span>
-                </div>
-                <JobCard
-                  job={job}
-                  onAccept={job.freelancer_wallet || selectedJobCompleted ? undefined : acceptJob}
-                  isSelected
-                  statusLabel={selectedJobCompleted ? "Completed" : undefined}
-                  statusTone={selectedJobCompleted ? "completed" : "default"}
-                  paymentAmount={selectedJobCompleted ? formatPayment(selectedPaymentTotal) : undefined}
-                />
-
-                {job.freelancer?.reputation && (
-                  <div className="reputation-card" style={{ marginTop: "1rem" }}>
-                    <div className="reputation-card-header">
-                      <span className="reputation-badge-title">Client Reputation Snapshot</span>
-                      <span className="reputation-card-chip">{job.freelancer.reputation.tier || "New"}</span>
-                    </div>
-                    <div className="reputation-card-metrics">
-                      <span>{Number(job.freelancer.reputation.completed_jobs || 0)} completed</span>
-                      <span>{Number(job.freelancer.reputation.ontime_delivery_pct || 0)}% on-time</span>
-                      <span>{formatPayment(job.freelancer.reputation.total_value_settled || 0)} USDC</span>
-                    </div>
-                    <small className="reputation-badge-caption">{job.freelancer.reputation.summary || "Verified delivery history"}</small>
+              <div className="freelancer-workspace">
+                <div className="job-list-pane" ref={assignedJobsRef}>
+                  <div className="workspace-card-section">
+                    <div className="section-heading"><h3>Assigned to Me</h3><span>{assignedJobs.length} jobs</span></div>
+                    {assignedJobs.length > 0 ? <div className="stacked-list">{assignedJobs.map((item) => <JobCard key={item.job_id} job={item} onSelect={selectJob} isSelected={job?.job_id === item.job_id} variant="assigned" statusLabel="In Progress" statusTone="assigned" />)}</div> : <EmptyState iconType="jobs" title="No Ongoing Jobs" message="Jobs assigned to your wallet will appear here." action={<button onClick={loadMyJobs} style={{ marginTop: "1rem" }}>Refresh Ongoing Jobs</button>} />}
                   </div>
-                )}
+                </div>
+                <aside className="job-detail-pane" ref={detailPaneRef}>
+                  {job && !selectedJobCompleted ? <>
+                    <div className="section-heading"><h3>Selected Job</h3><span>Job #{job.job_id}</span></div>
+                    <JobCard job={job} isSelected />
+                    {job.freelancer?.reputation && <div className="reputation-card" style={{ marginTop: "1rem" }}><div className="reputation-card-header"><span className="reputation-badge-title">Client Reputation Snapshot</span><span className="reputation-card-chip">{job.freelancer.reputation.tier || "New"}</span></div><div className="reputation-card-metrics"><span>{Number(job.freelancer.reputation.completed_jobs || 0)} completed</span><span>{Number(job.freelancer.reputation.ontime_delivery_pct || 0)}% on-time</span><span>{formatPayment(job.freelancer.reputation.total_value_settled || 0)} USDC</span></div><small className="reputation-badge-caption">{job.freelancer.reputation.summary || "Verified delivery history"}</small></div>}
+                    {milestones.length > 0 && <div className="card compact-card" style={{ marginTop: "1rem" }}><h3>Milestones</h3><div style={{ display: "flex", flexDirection: "column", gap: "0.8rem", marginTop: "0.5rem" }}>{milestones.map((m, idx) => <div key={m.milestone_id} style={{ display: "flex", flexDirection: "column", gap: "0.2rem", padding: "0.6rem 0.8rem", border: "1.5px solid var(--border)", borderRadius: "var(--radius-sm)", background: "var(--surface-2)" }}><strong style={{ fontSize: "0.95rem", color: "var(--text)" }}>#{idx + 1} - {m.name}</strong><span style={{ fontSize: "0.85rem", color: "var(--muted)" }}>Status: <span style={{ fontWeight: 600, color: m.status === "approved" || m.status === "paid" ? "var(--crayon-green)" : m.status === "submitted" ? "var(--crayon-blue)" : "var(--crayon-orange)" }}>{m.status}</span>{canSubmitMilestone(milestones, idx) ? " (ready to submit)" : ""}</span></div>)}</div></div>}
+                    {normalizeWallet(job.freelancer_wallet) === walletAddress && <form className="grid-form compact-form" onSubmit={submitMilestone} style={{ marginTop: "1rem" }}><h3>Submit Completed Milestone</h3><div className="row-actions"><button type="button" className={selectedJobNeedsSubmissionSync ? "" : "ghost"} onClick={syncSubmittedMilestoneOnChain}>Sync Submitted Milestone On-chain</button><button type="button" className="ghost" onClick={syncOnChainAccept}>Sync On-chain Accept</button></div><label style={{ marginTop: "1rem" }}>Completed milestone<select value={milestoneId} onChange={(e) => setMilestoneId(e.target.value)} required><option value="">Select milestone</option>{milestones.map((m, idx) => <option key={m.milestone_id} value={m.milestone_id} disabled={!canSubmitMilestone(milestones, idx)}>#{idx + 1} - {m.name} ({m.status})</option>)}</select></label><label>Submission URL<input value={fileUrl} onChange={(e) => setFileUrl(e.target.value)} placeholder="https://files.example/submission.zip" required /></label><button type="submit" disabled={!milestoneId}>Submit Milestone</button>{!milestoneId && <p className="empty-state">{getSubmissionHint(milestones)}</p>}</form>}
+                  </> : <EmptyState iconType="select" title="No Ongoing Job Selected" message="Select an ongoing job to view milestones, submit work, or sync on-chain statuses." />}
+                </aside>
+              </div>
+            </section>
+          )}
 
-                {selectedJobCompleted && (
-                  <div className="payment-summary">
-                    <span className="status-pill status-pill-completed">Payment received</span>
-                    <h3>Money received</h3>
-                    <strong>{formatPayment(selectedPaymentTotal)}</strong>
-                    <small>{job.title} is complete. Escrow payment has been released to your freelancer wallet.</small>
-                  </div>
-                )}
+          {activeTab === "open" && (
+            <section className="dashboard-section" ref={openJobsRef}>
+              <header className="section-header"><span className="section-badge">02</span><h3>Open Jobs</h3></header>
+              <div className="row-actions" style={{ marginBottom: "1rem" }}><button onClick={loadOpenJobs}>Refresh Open Jobs</button></div>
+              <div className="workspace-card-section">
+                <div className="section-heading"><h3>Available Jobs</h3><span>{openJobs.length} jobs</span></div>
+                {openJobs.length > 0 ? <div className="stacked-list">{openJobs.map((item) => <JobCard key={item.job_id} job={item} onAccept={acceptJob} variant="open" />)}</div> : <EmptyState iconType="search" title="Browse Open Projects" message="Look for jobs posted by clients that don't have an assigned freelancer yet." action={<button className="ghost" onClick={loadOpenJobs} style={{ marginTop: "1rem" }}>Refresh Open Jobs</button>} />}
+              </div>
+            </section>
+          )}
 
-                {milestones.length > 0 && (
-                  <div className="card compact-card" style={{ marginTop: "1rem" }}>
-                    <h3>Milestones</h3>
-                    <div style={{ display: "flex", flexDirection: "column", gap: "0.8rem", marginTop: "0.5rem" }}>
-                      {milestones.map((m, idx) => (
-                        <div key={m.milestone_id} style={{ display: "flex", flexDirection: "column", gap: "0.2rem", padding: "0.6rem 0.8rem", border: "1.5px solid var(--border)", borderRadius: "var(--radius-sm)", background: "var(--surface-2)" }}>
-                          <strong style={{ fontSize: "0.95rem", color: "var(--text)" }}>#{idx + 1} - {m.name}</strong>
-                          <span style={{ fontSize: "0.85rem", color: "var(--muted)" }}>
-                            Status: <span style={{ fontWeight: 600, color: m.status === "approved" || m.status === "paid" ? "var(--crayon-green)" : m.status === "submitted" ? "var(--crayon-blue)" : "var(--crayon-orange)" }}>{m.status}</span>
-                            {canSubmitMilestone(milestones, idx) ? " (ready to submit)" : ""}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {normalizeWallet(job.freelancer_wallet) === walletAddress && !selectedJobCompleted && (
-                  <form className="grid-form compact-form" onSubmit={submitMilestone} style={{ marginTop: "1rem" }}>
-                    <h3>Submit Completed Milestone</h3>
-                    <div className="row-actions">
-                      <button
-                        type="button"
-                        className={selectedJobNeedsSubmissionSync ? "" : "ghost"}
-                        onClick={syncSubmittedMilestoneOnChain}
-                      >
-                        Sync Submitted Milestone On-chain
-                      </button>
-                      <button type="button" className="ghost" onClick={syncOnChainAccept}>
-                        Sync On-chain Accept
-                      </button>
-                    </div>
-                    <label style={{ marginTop: "1rem" }}>
-                      Completed milestone
-                      <select
-                        value={milestoneId}
-                        onChange={(e) => setMilestoneId(e.target.value)}
-                        required
-                      >
-                        <option value="">Select milestone</option>
-                        {milestones.map((m, idx) => (
-                          <option
-                            key={m.milestone_id}
-                            value={m.milestone_id}
-                            disabled={!canSubmitMilestone(milestones, idx)}
-                          >
-                            #{idx + 1} - {m.name} ({m.status})
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <label>
-                      Submission URL
-                      <input
-                        value={fileUrl}
-                        onChange={(e) => setFileUrl(e.target.value)}
-                        placeholder="https://files.example/submission.zip"
-                        required
-                      />
-                    </label>
-                    <button type="submit" disabled={!milestoneId}>
-                      Submit Milestone
-                    </button>
-                    {!milestoneId && (
-                      <p className="empty-state">
-                        {getSubmissionHint(milestones)}
-                      </p>
-                    )}
-                  </form>
-                )}
-              </>
-            ) : (
-              <EmptyState
-                iconType="select"
-                title="No Job Selected"
-                message="Select any job card from the lists to view detailed milestone breakdowns, submit work, or sync on-chain statuses."
-              />
-            )}
-          </aside>
-        </div>
-      </section>
-    </main>
-  </div>
+          {activeTab === "completed" && (
+            <section className="dashboard-section">
+              <header className="section-header"><span className="section-badge">03</span><h3>Completed Jobs</h3></header>
+              <div className="row-actions" style={{ marginBottom: "1rem" }}><button onClick={loadMyJobs}>Refresh Completed Jobs</button></div>
+              <div className="workspace-card-section">
+                <div className="section-heading"><h3>Completed Jobs</h3><span>{completedJobs.length} jobs</span></div>
+                {completedJobs.length > 0 ? <div className="stacked-list">{completedJobs.map((item) => <JobCard key={item.job_id} job={item} variant="completed" statusLabel="Completed" statusTone="completed" paymentAmount={formatPayment(getPaymentTotal(item.milestones))} />)}</div> : <EmptyState iconType="jobs" title="No Completed Jobs" message="Completed jobs will appear here after all milestones are approved and paid." />}
+              </div>
+            </section>
+          )}
+        </main>
+      </div>
       {status && (
         <div className="status-modal-overlay" onClick={handleDismiss}>
           <div className="status-modal-content" onClick={(e) => e.stopPropagation()}>
@@ -975,15 +772,15 @@ export default function FreelancerDashboard() {
               {getStatusType(status) === "error" && "✗"}
               {getStatusType(status) === "info" && "ℹ"}
             </div>
-            
+
             <h4>
               {getStatusType(status) === "success" && "Success!"}
               {getStatusType(status) === "error" && "Error / Action Required"}
               {getStatusType(status) === "info" && "Notice"}
             </h4>
-            
+
             <p className="status-message">{status}</p>
-            
+
             {txHash && (
               <div className="tx-wrapper">
                 <span>Transaction Hash:</span>
@@ -997,7 +794,7 @@ export default function FreelancerDashboard() {
                 </a>
               </div>
             )}
-            
+
             <button className="status-close-btn" onClick={handleDismiss}>
               Okay
             </button>

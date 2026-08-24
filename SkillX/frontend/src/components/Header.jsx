@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useWallet } from "../context/WalletContext";
 
@@ -20,6 +20,22 @@ export default function Header({ theme, onToggleTheme }) {
     useWallet();
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
+  const headerRef = useRef(null);
+
+  useLayoutEffect(() => {
+    const el = headerRef.current;
+    if (!el) return;
+    const update = () => {
+      document.documentElement.style.setProperty(
+        "--topbar-height",
+        `${el.getBoundingClientRect().height}px`
+      );
+    };
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   const handleConnect = async () => {
     setIsOpen(false);
@@ -32,7 +48,7 @@ export default function Header({ theme, onToggleTheme }) {
   const showFreelancer = role === "freelancer" || role === "both";
 
   return (
-    <header className="topbar">
+    <header className="topbar" ref={headerRef}>
       <div className="topbar-brand">
         <Link to="/" className="logo" onClick={() => setIsOpen(false)}>
           SkillX

@@ -6,6 +6,8 @@
 [data-theme="light"],
 :root[data-theme="light"],
 body[data-theme="light"] {
+  /* Navbar height is set dynamically by Header.jsx via ResizeObserver */
+  --topbar-height: 0px;
   /* Soft Premium Matte Sketchbook Paper */
   --bg: #eceae4;
   --bg-elevated: #dfdbd3;
@@ -82,6 +84,7 @@ body[data-theme="dark"] {
 
 body {
   margin: 0;
+  padding-top: var(--topbar-height);
   background-color: var(--bg);
   background-image: var(--paper-grain);
   background-size: 16px 16px, 16px 16px, 8px 8px, 8px 8px;
@@ -112,8 +115,10 @@ body {
   background-image: var(--paper-grain);
   background-size: 8px 8px;
   border-bottom: 3px solid var(--border);
-  position: sticky;
+  position: fixed;
   top: 0;
+  left: 0;
+  right: 0;
   z-index: 50;
 }
 
@@ -3446,47 +3451,32 @@ textarea {
 
 /* ── Shared client/freelancer workspace navigation ── */
 .workspace-layout {
-  display: grid;
-  grid-template-columns: 224px minmax(0, 1fr);
-  gap: 1.75rem;
-  align-items: start;
+  --workspace-sidebar-width: 224px;
+  --workspace-sidebar-gap: 2rem;
+  min-width: 0;
 }
 
 .workspace-layout.is-collapsed {
-  grid-template-columns: 64px minmax(0, 1fr);
+  --workspace-sidebar-width: 64px;
 }
 
 .workspace-main {
-  grid-column: 2;
   min-width: 0;
 }
 
 .workspace-sidebar {
-  position: sticky;
-  top: 104px;
   z-index: 20;
   display: flex;
   align-items: stretch;
   flex-direction: column;
-  width: 224px;
-  height: calc(100dvh - 128px);
-  min-height: 360px;
   overflow-y: auto;
   padding: 0.65rem;
   border: 2px solid color-mix(in srgb, var(--border) 18%, transparent);
-  border-left: none;
-  border-radius: 0 16px 16px 0;
   background: color-mix(in srgb, var(--surface) 86%, var(--bg));
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   box-shadow: 3px 3px 0 color-mix(in srgb, var(--border) 18%, transparent);
-  transition: box-shadow 0.35s ease,
-              border-color 0.35s ease,
-              background 0.35s ease;
-}
-
-.workspace-layout.is-collapsed .workspace-sidebar {
-  width: 64px;
+  transition: width 0.3s ease, box-shadow 0.35s ease, border-color 0.35s ease, background 0.35s ease;
 }
 
 .workspace-sidebar-topbar {
@@ -3546,7 +3536,6 @@ textarea {
   flex: 1;
   min-width: 0;
   gap: 0.45rem;
-  overflow: visible;
 }
 
 .workspace-sidebar-item {
@@ -3601,36 +3590,56 @@ textarea {
   text-overflow: ellipsis;
 }
 
-/* Mobile: collapse to horizontal top bar */
+/* Desktop: fixed app navigation. The normal-flow topbar remains above it at
+   page start; once scrolled away, the sidebar naturally occupies the viewport top. */
+@media (min-width: 1101px) {
+  .workspace-layout {
+    display: block;
+  }
+
+  .workspace-main {
+    width: min(100% - var(--workspace-sidebar-width) - var(--workspace-sidebar-gap), 1280px);
+    margin-left: calc(var(--workspace-sidebar-width) + var(--workspace-sidebar-gap));
+  }
+
+  .workspace-sidebar {
+    position: fixed;
+    top: var(--topbar-height);
+    bottom: 0;
+    left: 0;
+    width: var(--workspace-sidebar-width);
+    height: auto;
+    min-height: 0;
+    border-left: none;
+    border-top: none;
+    border-radius: 0 0 16px 0;
+  }
+
+  .workspace-sidebar-nav {
+    justify-content: flex-start;
+  }
+}
+
+/* Mobile and tablet: retain the horizontal, in-flow workspace navigation. */
 @media (max-width: 1100px) {
   .workspace-layout {
+    display: grid;
     grid-template-columns: minmax(0, 1fr);
     gap: 1rem;
   }
 
-  .workspace-layout.is-collapsed {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .workspace-main {
-    grid-column: 1;
-  }
-
   .workspace-sidebar {
     position: sticky;
-    top: 88px;
+    top: 0;
     width: 100%;
     height: auto;
+    max-height: none;
     min-height: auto;
     flex-direction: row;
     align-items: center;
     overflow: hidden;
     padding: 0.55rem;
-    border: 2px solid color-mix(in srgb, var(--border) 18%, transparent);
     border-radius: 16px;
-    background: color-mix(in srgb, var(--surface) 86%, var(--bg));
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
   }
 
   .workspace-sidebar-topbar {
@@ -3640,10 +3649,7 @@ textarea {
     border-bottom: none;
   }
 
-  .workspace-sidebar-heading {
-    display: none;
-  }
-
+  .workspace-sidebar-heading,
   .workspace-sidebar-toggle {
     display: none;
   }
@@ -3662,104 +3668,6 @@ textarea {
 
   .workspace-sidebar-item.active {
     box-shadow: inset 0 -3px 0 var(--primary) !important;
-  }
-}
-
-/* Desktop: Fixed to the side like ChatGPT */
-@media (min-width: 1101px) {
-  .workspace-layout {
-    grid-template-columns: 224px minmax(0, 1fr);
-    gap: 2.5rem;
-  }
-
-  .workspace-layout.is-collapsed {
-    grid-template-columns: 64px minmax(0, 1fr);
-  }
-
-  .workspace-main {
-    grid-column: 2;
-  }
-
-  .workspace-sidebar {
-    position: fixed;
-    top: 88px; /* Start right below the header */
-    left: 0;
-    z-index: 10;
-    width: 224px;
-    height: calc(100dvh - 88px);
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    padding: 1rem 0.65rem;
-    overflow-y: auto;
-    border: none;
-    border-right: 1px solid color-mix(in srgb, var(--border) 40%, transparent);
-    border-radius: 0;
-    background: color-mix(in srgb, var(--surface) 70%, var(--bg));
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    box-shadow: none;
-    transition: width 0.3s ease, background 0.35s ease;
-  }
-
-  .workspace-layout.is-collapsed .workspace-sidebar {
-    width: 64px;
-  }
-
-  .workspace-sidebar-topbar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0 0.5rem 1rem;
-    margin-bottom: 0.5rem;
-    border-bottom: 1px solid color-mix(in srgb, var(--border) 14%, transparent);
-  }
-
-  .workspace-layout.is-collapsed .workspace-sidebar-topbar {
-    justify-content: center;
-    padding: 0 0 1rem;
-  }
-
-  .workspace-sidebar-heading {
-    display: block;
-    overflow: hidden;
-    color: var(--muted);
-    font-size: 0.72rem;
-    font-weight: 800;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    white-space: nowrap;
-  }
-
-  .workspace-sidebar-toggle {
-    display: grid;
-  }
-
-  .workspace-sidebar-nav {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-    overflow: visible;
-  }
-
-  .workspace-sidebar-item {
-    width: 100%;
-    padding: 0.75rem 0.85rem;
-    border-radius: 10px;
-  }
-
-  .workspace-layout.is-collapsed .workspace-sidebar-item {
-    justify-content: center;
-    padding-inline: 0;
-  }
-
-  .workspace-layout.is-collapsed .workspace-sidebar-label {
-    display: none;
-  }
-
-  .workspace-sidebar-item.active {
-    box-shadow: none !important;
-    background: color-mix(in srgb, var(--primary) 12%, transparent);
   }
 }
 
