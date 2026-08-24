@@ -13,6 +13,7 @@
 | Backend API | [skillx-tqzb.onrender.com](https://skillx-tqzb.onrender.com) |
 | Feedback form | [SkillX User Feedback Form](https://docs.google.com/forms/d/e/1FAIpQLSffAdXqPWPjtufDt_UxySfMGKZCTgQSbW9UiDb0Wv4VFNiFYg/viewform?usp=publish-editor) |
 | Demo | [YouTube walkthrough](https://www.youtube.com/watch?v=SfhH32hAEAw) |
+| Pitch deck | [SkillX_PitchDeck.pptx](./SkillX_PitchDeck.pptx) |
 
 ![SkillX marketplace home page](Images/MainPage2.png)
 
@@ -48,15 +49,15 @@ The in-app [Feedback & Product Roadmap](/SkillX/frontend/src/pages/FeedbackRoadm
 
 | Feedback item | Status | Current outcome |
 | --- | --- | --- |
-| Reduce unnecessary wallet transactions and improve sync reliability | **Implemented** | Key job and milestone actions use consolidated on-chain flows and dashboard refresh UX. |
-| Notify clients when a milestone is submitted for approval | **Implemented** | Milestone submission notifications are available in the client workflow. |
-| Make job posting, escrow funding, and milestone setup feel like one flow | **Implemented** | The job creation flow combines setup and escrow-oriented actions. |
+| Reduce unnecessary wallet transactions and improve sync reliability | **Implemented** | Consolidated transaction flows and milestone recovery/sync improvements ([def011f](https://github.com/Madhav0Seth/SkillX/commit/def011f), [ff40130](https://github.com/Madhav0Seth/SkillX/commit/ff40130)). |
+| Notify clients when a milestone is submitted for approval | **Implemented** | Milestone submission notifications are available in the client workflow ([a047ac0](https://github.com/Madhav0Seth/SkillX/commit/a047ac0)). |
+| Make job posting, escrow funding, and milestone setup feel like one flow | **Implemented** | Job creation supports a streamlined single-click transaction flow ([9ac797c](https://github.com/Madhav0Seth/SkillX/commit/9ac797c)). |
 | Add direct communication between client and freelancer on a job | **Under review** | Tracked as an open roadmap request; no chat feature is claimed. |
-| Add skill-based marketplace filtering for better job discovery | **Implemented** | Jobs support optional skills and marketplace filtering. |
+| Add skill-based marketplace filtering for better job discovery | **Implemented** | Jobs support optional skills and marketplace filtering ([6f71af2](https://github.com/Madhav0Seth/SkillX/commit/6f71af2)). |
 | Show clearer, actionable errors when a transaction or sync is blocked | **Implemented** | Transaction and sync feedback has been improved. |
-| Add wallet transaction loading states | **Implemented** | Wallet actions expose loading feedback. |
+| Add wallet transaction loading states | **Implemented** | Wallet actions expose loading feedback ([064a986](https://github.com/Madhav0Seth/SkillX/commit/064a986)). |
 
-Feedback can be submitted through the [SkillX User Feedback Form](https://docs.google.com/forms/d/e/1FAIpQLSffAdXqPWPjtufDt_UxySfMGKZCTgQSbW9UiDb0Wv4VFNiFYg/viewform?usp=publish-editor) or the in-app feedback experience. View [Form Responses](https://docs.google.com/spreadsheets/d/e/2PACX-1vQr-g61Nnj5PUoZ97tIkiYFG-JXYlKjUkpf98t1blK1flVpzsE5cDYxcIfWsZAMm5QorvSC19L4IhIt/pubhtml).
+Feedback can be submitted through the [SkillX User Feedback Form](https://docs.google.com/forms/d/e/1FAIpQLSffAdXqPWPjtufDt_UxySfMGKZCTgQSbW9UiDb0Wv4VFNiFYg/viewform?usp=publish-editor) or the in-app feedback experience. **57 form responses were collected.** View [Form Responses](https://docs.google.com/spreadsheets/d/e/2PACX-1vQr-g61Nnj5PUoZ97tIkiYFG-JXYlKjUkpf98t1blK1flVpzsE5cDYxcIfWsZAMm5QorvSC19L4IhIt/pubhtml).
 
 ![Feedback and product roadmap](Images/FeedbackPage.png)
 
