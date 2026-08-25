@@ -1,4 +1,6 @@
-const configuredApiUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:4000";
+const PRODUCTION_API_URL = "https://skillx-tqzb.onrender.com";
+const configuredApiUrl = import.meta.env.VITE_API_BASE_URL
+  || (import.meta.env.PROD ? PRODUCTION_API_URL : "http://localhost:4000");
 
 export const API_BASE_URL = configuredApiUrl.replace(/\/+$/, "");
 export const HORIZON_URL = import.meta.env.VITE_HORIZON_URL || "https://horizon-testnet.stellar.org";
