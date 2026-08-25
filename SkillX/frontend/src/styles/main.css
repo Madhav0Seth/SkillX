@@ -64,12 +64,14 @@
 }
 
 
-:root,
+:root {
+  /* Fallback until Header.jsx measures the fixed navbar. */
+  --topbar-height: 0px;
+}
+
 [data-theme="light"],
 :root[data-theme="light"],
 body[data-theme="light"] {
-  /* Navbar height is set dynamically by Header.jsx via ResizeObserver */
-  --topbar-height: 0px;
   /* Soft Premium Matte Sketchbook Paper */
   --bg: #eceae4;
   --bg-elevated: #dfdbd3;
