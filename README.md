@@ -12,7 +12,7 @@
 | Public marketplace | [Browse open jobs](https://skill-x-nu.vercel.app/marketplace) |
 | Backend API | [skillx-tqzb.onrender.com](https://skillx-tqzb.onrender.com) |
 | Feedback form | [SkillX User Feedback Form](https://docs.google.com/forms/d/e/1FAIpQLSffAdXqPWPjtufDt_UxySfMGKZCTgQSbW9UiDb0Wv4VFNiFYg/viewform?usp=publish-editor) |
-| Demo | [YouTube walkthrough](https://www.youtube.com/watch?v=SfhH32hAEAw) |
+| Demo | [YouTube walkthrough](https://www.youtube.com/watch?v=9m75SvrmoOc) |
 | Pitch deck | [SkillX_PitchDeck.pdf](./SkillX_PitchDeck.pdf) |
 
 ![SkillX marketplace home page](Images/MainPage2.png)
