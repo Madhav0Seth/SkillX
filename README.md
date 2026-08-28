@@ -9,6 +9,7 @@
 | Resource | Link |
 | --- | --- |
 | Live app | [skill-x-nu.vercel.app](https://skill-x-nu.vercel.app/) |
+| Documentation | [skill-x-nu.vercel.app/docs](https://skill-x-nu.vercel.app/docs) |
 | Public marketplace | [Browse open jobs](https://skill-x-nu.vercel.app/marketplace) |
 | Backend API | [skillx-tqzb.onrender.com](https://skillx-tqzb.onrender.com) |
 | Feedback form | [SkillX User Feedback Form](https://docs.google.com/forms/d/e/1FAIpQLSffAdXqPWPjtufDt_UxySfMGKZCTgQSbW9UiDb0Wv4VFNiFYg/viewform?usp=publish-editor) |

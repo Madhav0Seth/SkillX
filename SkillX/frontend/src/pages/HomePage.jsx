@@ -109,6 +109,10 @@ export default function HomePage() {
               <span>Profile</span>
               <strong>Wallet, reputation, and history</strong>
             </Link>
+            <Link to="/docs">
+              <span>Documentation</span>
+              <strong>Architecture, contracts, and API</strong>
+            </Link>
           </div>
         </aside>
       </section>

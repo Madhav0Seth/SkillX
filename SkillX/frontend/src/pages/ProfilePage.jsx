@@ -230,7 +230,12 @@ export default function ProfilePage() {
               {profile?.avatar_url ? (
                 <img src={profile.avatar_url} alt="Profile" />
               ) : (
-                <span className="avatar-preview-placeholder" style={{ fontSize: "2rem" }}>👤</span>
+                <span className="avatar-preview-placeholder" style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ opacity: 0.6 }}>
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                    <circle cx="12" cy="7" r="4" />
+                  </svg>
+                </span>
               )}
             </div>
             <div>

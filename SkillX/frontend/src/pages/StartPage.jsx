@@ -385,6 +385,15 @@ export default function StartPage() {
           <small style={{ fontSize: "0.95rem" }}>
             Wallet authentication is secured on-chain.
           </small>
+
+          <div style={{ display: "flex", gap: "0.75rem", marginTop: "1.1rem", justifyContent: "center", flexWrap: "wrap" }}>
+            <Link to="/marketplace" className="btn-link ghost" style={{ fontSize: "0.85rem", padding: "0.4rem 0.85rem" }}>
+              Explore Marketplace
+            </Link>
+            <Link to="/docs" className="btn-link ghost" style={{ fontSize: "0.85rem", padding: "0.4rem 0.85rem" }}>
+              Documentation
+            </Link>
+          </div>
         </div>
 
         {/* Floating scroll action hint */}

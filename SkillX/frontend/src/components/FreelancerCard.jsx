@@ -26,7 +26,10 @@ export default function FreelancerCard({ freelancer, onSelect }) {
             {freelancer.avatar_url ? (
               <img src={freelancer.avatar_url} alt="Freelancer Avatar" />
             ) : (
-              <span style={{ fontSize: "1.2rem", opacity: 0.5 }}>👤</span>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ opacity: 0.6 }}>
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
+              </svg>
             )}
           </div>
           <div className="freelancer-card-header" style={{ margin: 0 }}>

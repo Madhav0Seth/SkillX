@@ -62,7 +62,10 @@ export default function JobCard({
               {job.client?.avatar_url ? (
                 <img src={job.client.avatar_url} alt="Client Avatar" />
               ) : (
-                <span style={{ fontSize: "0.6rem", opacity: 0.5 }}>👤</span>
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ opacity: 0.6 }}>
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                  <circle cx="12" cy="7" r="4" />
+                </svg>
               )}
             </div>
             <span style={{ fontWeight: 600 }}>{job.client?.name || shortAddress(job.client_wallet)}</span>
@@ -76,7 +79,10 @@ export default function JobCard({
               {job.freelancer?.avatar_url ? (
                 <img src={job.freelancer.avatar_url} alt="Freelancer Avatar" />
               ) : (
-                <span style={{ fontSize: "0.6rem", opacity: 0.5 }}>👤</span>
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ opacity: 0.6 }}>
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                  <circle cx="12" cy="7" r="4" />
+                </svg>
               )}
             </div>
             <span style={{ fontWeight: 600 }}>{job.freelancer?.name || shortAddress(job.freelancer_wallet)}</span>
